@@ -17,7 +17,7 @@ export function calculateOperations(s:SurvivalState):{state:SurvivalState;report
  const botanist=workers.find(c=>c.role==='Botanist'&&c.assignment==='greenhouse');
  const efficiency=(c:typeof botanist)=>c?(c.health/100)*(1-c.fatigue/200)*(.8+c.morale/500):0;
  const scientist=workers.find(c=>c.role==='Scientist / Medic'&&c.assignment==='research');
- const generated=buildings.filter(b=>b.kind==='solar'&&b.active).reduce((v,b)=>v+balance.solarKwhPerArraySol*(1-(b.damage??0)/100)*dust*s.systems.panelEfficiency,0);
+ const generated=buildings.filter(b=>b.kind==='solar'&&b.active).reduce((v,b)=>v+balance.solarKwhPerArraySol*(1-(b.damage??0)/100)*dust*s.systems.panelEfficiency*activeEffects.filter(e=>e.kind==='solar'&&e.productionFactor!==undefined).reduce((n,e)=>n*e.productionFactor!,1),0);
  let energy=s.resources.power+generated;
  const powered:Record<string,number>={};
  let used=0;

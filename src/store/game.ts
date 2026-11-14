@@ -1,4 +1,7 @@
-import { answerStartup, commissioningComplete, facilityUnlocked, migrateStartup, type StartupKind } from '../simulation/commissioning';
+import { applyTraining, restartTrainingTask, type TaskAction } from '../training/engine';
+import type { TaskId } from '../training/catalog';
+import { evaTick, startRelayFault, repairEquipment } from '../explorer/survival';
+import { commissioningComplete, facilityUnlocked, migrateStartup, migrateTraining } from '../simulation/commissioning';
 import { expansionCandidates, EXPANSION_PLOTS } from '../game/worldConfig';
 import { englishText } from './english';
 import { create } from 'zustand';
@@ -8,7 +11,8 @@ import { createScenario, nextSol, canWork } from '../simulation/survival';
 import { applyDecision, optionBlocked, decisionOptions } from '../simulation/events';
 import type { Assignment, Difficulty, SurvivalState } from '../simulation/types';
 type Game = SurvivalState & {
- answerStartup:(kind:StartupKind,answerId:string)=>void;
+ startFieldMission:()=>void; fieldRepair:(id:string)=>boolean; evaTick:(id:string,dt:number,safe:boolean,suited:boolean,oxygen:number,moving:boolean,sprint:boolean)=>void; fieldUse:(id:string,playerId:string)=>void; refillSuit:(amount:number)=>boolean; pressurize:()=>boolean;
+ trainingAction:(id:TaskId,action:TaskAction)=>void; restartTraining:(id:TaskId)=>void;
  prologueSeen:boolean; completePrologue:()=>void; replayPrologue:()=>void;
  selected:string|null; placing:Kind|null; expanding:boolean; selectedPlot:string|null;
  startExpansion:()=>void; chooseExpansion:(id:string)=>void; confirmExpansion:()=>void;
@@ -19,11 +23,18 @@ type Game = SurvivalState & {
 };
 // The legacy colony save is left untouched. Survival saves include a versioned, complete simulation.
 export const useGame=create<Game>()(persist((set,get)=>({...createScenario(),prologueSeen:false,selected:null,placing:null,expanding:false,selectedPlot:null,
- answerStartup:(kind,answerId)=>set(s=>answerStartup(simulationSnapshot(s),kind,answerId)),
+ startFieldMission:()=>set(s=>startRelayFault(simulationSnapshot(s))),
+ fieldRepair:id=>{const s=get(),n=repairEquipment(simulationSnapshot(s),id);if(n.resources.materials===s.resources.materials)return false;set(n);return true;},
+ evaTick:(id,dt,safe,suited,oxygen,moving,sprint)=>set(s=>{const extra=s.environment.radiationUntil>s.sol?s.environment.radiationExtraMsv:0;const astronauts=s.astronauts.map(c=>c.id===id?evaTick(c,dt,safe,suited,oxygen,moving,sprint,extra):c);return {astronauts,crew:astronauts.filter(c=>c.alive).length};}),
+ refillSuit:amount=>{const s=get(),cost=Math.max(0,Math.min(100,amount))*.002;if(s.resources.oxygen<cost)return false;set({resources:{...s.resources,oxygen:s.resources.oxygen-cost},stats:{...s.stats,consumed:{...s.stats.consumed,oxygen:s.stats.consumed.oxygen+cost}}});return true;},
+ pressurize:()=>{const s=get();if(s.resources.oxygen<.05||s.resources.power<.2)return false;set({resources:{...s.resources,oxygen:s.resources.oxygen-.05,power:s.resources.power-.2},stats:{...s.stats,consumed:{...s.stats.consumed,oxygen:s.stats.consumed.oxygen+.05,power:s.stats.consumed.power+.2}}});return true;},
+ fieldUse:(id,playerId)=>{const s=get(),b=s.buildings.find(b=>b.id===id);if(!b||!b.active||!facilityUnlocked(s,b.kind))return;const flag=`field-use-${id}-${s.sol}`;if(s.flags.includes(flag)){set({message:'Already collected this sol.'});return;}if(s.resources.power<3)return;let n=simulationSnapshot(s);n=structuredClone(n);n.resources.power-=3;n.stats.consumed.power+=3;n.flags.push(flag);if(b.kind==='greenhouse'){n.resources.food+=.35;n.stats.produced.food+=.35;}else if(b.kind==='medical'){n.astronauts=n.astronauts.map(c=>c.id===playerId?{...c,health:Math.min(100,c.health+10),fatigue:Math.max(0,c.fatigue-20)}:c);}else if(b.kind==='storage'){n.resources.materials+=6;n.stats.produced.materials+=6;}else if(b.kind==='research'){n.systems.research+=4;n.resources.materials+=2;n.stats.produced.materials+=2;}else if(b.kind==='water'){n.systems.waterKg=Math.min(150,n.systems.waterKg+1);}else if(b.kind==='oxygen'){n.resources.oxygen+=.2;n.stats.produced.oxygen+=.2;}else if(b.kind==='habitat'){n.astronauts=n.astronauts.map(c=>c.id===playerId?{...c,fatigue:Math.max(0,c.fatigue-15)}:c);}else{n.resources.power=Math.min(n.systems.batteryCapacityKwh,n.resources.power+4);n.stats.produced.power+=4;}n.message='Equipment cycle complete. Colony reserves updated.';set(n);},
+ trainingAction:(id,action)=>set(s=>{const before=simulationSnapshot(s),after=applyTraining(before,id,action);return after===before?s:after}),
+ restartTraining:id=>set(s=>restartTrainingTask(simulationSnapshot(s),id)),
  completePrologue:()=>set({prologueSeen:true}),
  replayPrologue:()=>set({prologueSeen:false,placing:null,expanding:false,selectedPlot:null}),
  select:id=>set({selected:id,placing:null,expanding:false,selectedPlot:null}),
- build:kind=>{if(kind&&!commissioningComplete(get())){set({message:'Complete all seven startup challenges before constructing new facilities.'});return;}set({placing:kind,selected:null,expanding:false,selectedPlot:null,message:kind?'Choose clear terrain. Click to construct. Esc to cancel.':'Construction cancelled.'});},
+ build:kind=>{if(kind&&!commissioningComplete(get())){set({message:'Complete all six training rooms before constructing new facilities.'});return;}set({placing:kind,selected:null,expanding:false,selectedPlot:null,message:kind?'Choose clear terrain. Click to construct. Esc to cancel.':'Construction cancelled.'});},
  place:(x,z)=>{
   const s=get(),k=s.placing;
   if(!k||!commissioningComplete(s)||!facilityUnlocked(s,k)||s.pendingEvent||s.status!=='playing'||s.effects.some(e=>e.constructionHold&&e.untilSol>s.sol)||!validPlacement(k,x,z,s.buildings,s.expandedPlots)||s.resources.materials<catalog[k].cost)return false;
@@ -39,7 +50,7 @@ export const useGame=create<Game>()(persist((set,get)=>({...createScenario(),pro
  priority:p=>set(s=>({flags:[...s.flags.filter(f=>!f.startsWith('priority-')),`priority-${p}`],message:`Power allocation: habitat safety first, then ${p}.`})),
  reset:(seed,difficulty,scenario)=>set(s=>({...createScenario(seed??s.seed,difficulty??s.difficulty,scenario??s.scenario),prologueSeen:false,selected:null,placing:null,expanding:false,selectedPlot:null})),
  dismissNotification:()=>set({notifications:[]})
-}),{name:'mars-genesis-survival',version:5,migrate:(saved,version)=>{const s=saved as Partial<Game>;return {...migrateStartup({...s,message:englishText(s.message??'Welcome to Ares One.'),history:(s.history??[]).map(englishText),notifications:(s.notifications??[]).map(englishText),expandedPlots:(s.expandedPlots??[]).filter(id=>EXPANSION_PLOTS.some(p=>p.id===id))} as Game),prologueSeen:version<4?false:(s.prologueSeen??false)} as Game},partialize:state=>({...simulationSnapshot(state),prologueSeen:state.prologueSeen})}));
+}),{name:'mars-genesis-survival',version:6,migrate:(saved,version)=>{const s=saved as Partial<Game>;return {...migrateTraining((version<5?migrateStartup:((state:SurvivalState)=>state))({...s,message:englishText(s.message??'Welcome to Ares One.'),history:(s.history??[]).map(englishText),notifications:(s.notifications??[]).map(englishText),expandedPlots:(s.expandedPlots??[]).filter(id=>EXPANSION_PLOTS.some(p=>p.id===id))} as Game)),prologueSeen:version<4?false:(s.prologueSeen??false)} as Game},partialize:state=>({...simulationSnapshot(state),prologueSeen:state.prologueSeen})}));
 export function simulationSnapshot(state:Game):SurvivalState {
  const {selected,placing,expanding,selectedPlot,prologueSeen,...rest}=state;
  return Object.fromEntries(Object.entries(rest).filter(([,v])=>typeof v!=='function')) as unknown as SurvivalState;

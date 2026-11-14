@@ -4,10 +4,12 @@ import { nextSol } from './survival';
 import { calculateOperations } from './lifeSupport';
 import { updateCrew } from './crewHealth';
 import { validPlacement } from './engine';
-import { answerStartup, STARTUP_CHALLENGES, STARTUP_KINDS, commissioningComplete, facilityUnlocked, migrateStartup } from './commissioning';
+import { STARTUP_KINDS, commissioningComplete, facilityUnlocked, migrateStartup } from './commissioning';
+import { applyTraining } from '../training/engine';
+import { solveTask } from '../training/testHelpers';
 import { commissionAll, readyScenario } from './testHelpers';
 
-describe('seven facility startup challenges',()=>{
+describe('six hands-on training rooms',()=>{
  it('prebuilds every requested facility offline with room for the two new buildings',()=>{
   const s=createScenario();
   for(const kind of STARTUP_KINDS){expect(s.buildings.some(b=>b.kind===kind)).toBe(true);expect(facilityUnlocked(s,kind)).toBe(false);}
@@ -17,29 +19,26 @@ describe('seven facility startup challenges',()=>{
  it('keeps time, reserves and crew unchanged until all challenges are complete',()=>{
   const s=createScenario(2026,'expert'),before=structuredClone(s);
   for(let i=0;i<40;i++)expect(nextSol(s)).toEqual(before);
-  let n=answerStartup(s,'solar','align');
+  let n=solveTask(s,'dust');
   expect(nextSol(n)).toEqual(n);expect(n.resources).toEqual(s.resources);expect(n.astronauts).toEqual(s.astronauts);
   n=commissionAll(n);expect(commissioningComplete(n)).toBe(true);expect(nextSol(n).sol).toBe(2);
  });
- it('a wrong answer explains the problem and never activates a building or spends supplies',()=>{
-  const s=createScenario(),n=answerStartup(s,'water','unlimited');
-  expect(n.commissioning.feedback?.correct).toBe(false);expect(n.commissioning.feedback?.text).toContain('does not create');
-  expect(n.commissioning.attempts.water).toBe(1);expect(n.commissioning.completed).toEqual([]);
-  expect(n.buildings).toEqual(s.buildings);expect(n.resources).toEqual(s.resources);
+ it('locks dependent rooms without spending supplies or allowing a skipped completion',()=>{
+  const s=createScenario();expect(applyTraining(s,'scan',{type:'dig'})).toBe(s);
+  expect(applyTraining(s,'battery',{type:'connect'})).toBe(s);
  });
- it('each correct solution activates only its facility group and cannot be rewarded twice',()=>{
-  for(const challenge of STARTUP_CHALLENGES){
-   const s=createScenario(),n=answerStartup(s,challenge.kind,challenge.options.find(o=>o.correct)!.id);
-   expect(n.commissioning.completed).toEqual([challenge.kind]);
-   for(const b of n.buildings)expect(b.active).toBe(b.kind===challenge.kind||(b.kind==='storage'&&challenge.kind==='water'));
-   expect(n.resources).toEqual(s.resources);expect(n.sol).toBe(1);
-   expect(answerStartup(n,challenge.kind,challenge.options.find(o=>o.correct)!.id)).toEqual(n);
-  }
+ it('activates a facility only after all three tasks and cannot award twice',()=>{
+  const s=createScenario(),partial=solveTask(s,'dust');
+  expect(partial.commissioning.completed).toEqual([]);
+  const tracked=solveTask(partial,'sun'),ready=solveTask(tracked,'battery');
+  expect(ready.commissioning.completed).toEqual(['solar']);
+  for(const b of ready.buildings)expect(b.active).toBe(b.kind==='solar');
+  expect(ready.resources).toEqual(s.resources);expect(ready.sol).toBe(1);
+  expect(applyTraining(ready,'battery',{type:'connect'})).toBe(ready);
  });
- it('rejects unknown answers, finished missions and missing facilities',()=>{
-  const s=createScenario();expect(answerStartup(s,'solar','unknown')).toEqual(s);
-  s.status='lost';expect(answerStartup(s,'solar','align')).toEqual(s);
-  s.status='playing';s.buildings=s.buildings.filter(b=>b.kind!=='solar');expect(answerStartup(s,'solar','align')).toEqual(s);
+ it('rejects finished missions and unknown task input',()=>{
+  const s=createScenario();expect(applyTraining(s,'dust',{type:'unknown'})).toBe(s);
+  s.status='lost';expect(applyTraining(s,'dust',{type:'wipe',index:0})).toBe(s);
  });
  it('locked facilities cannot produce even if a stale save marks them active',()=>{
   const s=createScenario();s.buildings=s.buildings.map(b=>({...b,active:true}));

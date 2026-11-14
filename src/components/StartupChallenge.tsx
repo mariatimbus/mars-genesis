@@ -1,24 +1,14 @@
-import { CheckCircle2, LockKeyhole, ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2, LockKeyhole } from 'lucide-react';
 import { useGame } from '../store/game';
-import { STARTUP_CHALLENGES, STARTUP_KINDS, commissioningComplete, type StartupKind } from '../simulation/commissioning';
-import { catalog } from '../simulation/engine';
-
+import { STARTUP_KINDS, commissioningComplete, type StartupKind } from '../simulation/commissioning';
+import { roomNames, roomTasks } from '../training/catalog';
+import { blockedRoom } from '../training/engine';
+import { useTrainingUI } from '../training/ui';
 export function StartupOverview(){
- const s=useGame(),done=s.commissioning.completed.length;
- const next=STARTUP_KINDS.find(k=>!s.commissioning.completed.includes(k));
- return <><span className="eyebrow">LANDING CHECKLIST · SOL 01</span><h3>Bring your colony to life</h3><p>Robots assembled the facilities. Now it’s your turn to make them work.</p><div className="progress"><span style={{width:`${done/7*100}%`}}/></div><div className="mission-progress"><span>STARTUP CHALLENGES</span><strong>{done} / 7</strong></div><p className="startup-reserve-note">The crew waits safely in the lander. Time and supplies stay paused while you complete the challenges.</p>{next&&<button className="secondary" onClick={()=>s.select(s.buildings.find(b=>b.kind===next)?.id??null)}>Start {STARTUP_CHALLENGES.find(c=>c.kind===next)!.label.toLowerCase()} challenge <ArrowRight size={15}/></button>}</>;
+ const s=useGame(),done=s.commissioning.completed.length,next=STARTUP_KINDS.find(k=>!s.commissioning.completed.includes(k));
+ return <><span className="eyebrow">LANDING CHECKLIST / SOL 01</span><h3>Wake the colony</h3><p>Six rooms. Eighteen hands-on experiments. Learn how the systems depend on each other.</p><div className="progress"><span style={{width:`${done/6*100}%`}}/></div><div className="mission-progress"><span>ROOMS ONLINE</span><strong>{done} / 6</strong></div><p className="startup-reserve-note">The crew waits safely while you train. Time and colony supplies stay paused.</p><button className="secondary" onClick={()=>useTrainingUI.getState().show(next)}>Open mission challenges <ArrowRight size={15}/></button></>;
 }
 export function StartupChallenge({kind}:{kind:StartupKind}){
- const s=useGame(),challenge=STARTUP_CHALLENGES.find(c=>c.kind===kind)!;
- const complete=s.commissioning.completed.includes(kind);
- const feedback=s.commissioning.feedback?.kind===kind?s.commissioning.feedback:null;
- const next=STARTUP_KINDS.find(k=>!s.commissioning.completed.includes(k));
- return <div className="startup-challenge">
-  
-  <div className={`startup-state ${complete?'ready':''}`}>{complete?<CheckCircle2 size={15}/>:<LockKeyhole size={15}/>} {complete?'UNLOCKED':'LOCKED'}</div>
-  <h2>{challenge.label}</h2>
-  {!complete&&<><h3>{challenge.question}</h3><div className="startup-choices">{challenge.options.map((option,i)=><button key={option.id} onClick={()=>s.answerStartup(kind,option.id)}><span>{String(i+1).padStart(2,'0')}</span>{option.text}</button>)}</div></>}
-  {feedback&&<div role="status" className={`startup-feedback ${feedback.correct?'correct':'retry'}`}><strong>{feedback.correct?'Challenge complete.':'Think it through and try again.'}</strong><p>{feedback.text}</p></div>}
-  {complete&&<><button className="secondary" onClick={()=>s.select(next?s.buildings.find(b=>b.kind===next)?.id??null:null)}>{commissioningComplete(s)?'Return to your colony':`Next: ${STARTUP_CHALLENGES.find(c=>c.kind===next)!.label}`}<ArrowRight size={15}/></button></>}
- </div>;
+ const s=useGame(),complete=s.commissioning.completed.includes(kind),list=roomTasks(kind),blocked=blockedRoom(s,kind);
+ return <div className="startup-challenge"><div className={`startup-state ${complete?'ready':''}`}>{complete?<CheckCircle2 size={15}/>:<LockKeyhole size={15}/>} {complete?'ONLINE':'TRAINING REQUIRED'}</div><h2>{roomNames[kind]}</h2><p>{complete?'Keep learning in the hands-on trainer. Your running systems and reserves stay unchanged.':blocked.length?`Training sequence: complete ${blocked.map(k=>roomNames[k]).join(', ')} first.`:'Complete all three experiments to bring this system online.'}</p><ol className="startup-step-list">{list.map((task,i)=><li key={task.id}><span>0{i+1}</span>{task.title}<span>{s.commissioning.training.records[task.id]?`${s.commissioning.training.records[task.id]!.stars}/3 stars`:'-'}</span></li>)}</ol><button className="startup-launch" onClick={()=>useTrainingUI.getState().show(kind)}>{complete?'Practice experiments':'Open hands-on challenges'} <ArrowRight size={15}/></button><p>{commissioningComplete(s)?'All six rooms online. You can advance the mission from your tablet.':'Energy > Water > Oxygen > Greenhouse > Medical > Laboratory'}</p></div>;
 }

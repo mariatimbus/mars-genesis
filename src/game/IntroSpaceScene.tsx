@@ -7,7 +7,7 @@ import { EARTH_POSITION, EARTH_RADIUS, MARS_POSITION, MARS_RADIUS, LAUNCH_SURFAC
 function planetTexture(mars:boolean){
  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
  const ctx=canvas.getContext('2d')!;
- ctx.fillStyle=mars?'#b75431':'#123e6e';ctx.fillRect(0,0,1024,512);
+ ctx.fillStyle=mars?'#945f4d':'#123e6e';ctx.fillRect(0,0,1024,512);
  let seed=mars?91:33;const rand=()=>{seed=seed*16807%2147483647;return seed/2147483647};
  if(!mars){
   // Original procedural illustration, not a NASA satellite image.
@@ -37,13 +37,13 @@ function Rocket({progressRef,reducedMotion}:FlightProps){
   if(legs.current)legs.current.visible=p>.9;
  });
  return <group ref={rocket} scale={.45}>
- <mesh><cylinderGeometry args={[.31,.34,2.35,24]}/><meshStandardMaterial color="#e5e5de" metalness={.55} roughness={.3}/></mesh>
- <mesh position={[0,1.55,0]}><coneGeometry args={[.31,.75,24]}/><meshStandardMaterial color="#e4e3dc" metalness={.5} roughness={.3}/></mesh>
+ <mesh><cylinderGeometry args={[.31,.34,2.35,24]}/><meshStandardMaterial color="#8a90a6" metalness={.55} roughness={.3}/></mesh>
+ <mesh position={[0,1.55,0]}><coneGeometry args={[.31,.75,24]}/><meshStandardMaterial color="#9b9eb0" metalness={.5} roughness={.3}/></mesh>
  <mesh position={[0,.8,.3]}><boxGeometry args={[.24,.43,.07]}/><meshStandardMaterial color="#173e54" metalness={.6} roughness={.2}/></mesh>
- {[-.85,.2].map(y=><mesh key={y} position={[0,y,0]}><cylinderGeometry args={[.345,.345,.12,24]}/><meshStandardMaterial color={y<0?'#454d52':'#b76e48'} metalness={.7} roughness={.3}/></mesh>)}
+ {[-.85,.2].map(y=><mesh key={y} position={[0,y,0]}><cylinderGeometry args={[.345,.345,.12,24]}/><meshStandardMaterial color={y<0?'#454d52':'#643d50'} metalness={.7} roughness={.3}/></mesh>)}
  <mesh position={[0,-1.35,0]}><cylinderGeometry args={[.18,.29,.38,16]}/><meshStandardMaterial color="#4b575e" metalness={.8} roughness={.4}/></mesh>
  {[-1,1].map(side=><mesh key={side} position={[side*.32,-.9,0]} rotation={[0,0,side*-.35]}><boxGeometry args={[.13,.75,.42]}/><meshStandardMaterial color="#505d65" metalness={.5} roughness={.4}/></mesh>)}
- <group ref={boosters}>{[-1,1].map(side=><group key={side} position={[side*.52,0,0]}><mesh position={[0,-.25,0]}><cylinderGeometry args={[.17,.2,1.9,16]}/><meshStandardMaterial color="#cccfcc" metalness={.5} roughness={.5}/></mesh><mesh position={[0,.89,0]}><coneGeometry args={[.17,.4,16]}/><meshStandardMaterial color="#d5d5cc"/></mesh><mesh position={[0,-1.3,0]}><cylinderGeometry args={[.12,.2,.25,16]}/><meshStandardMaterial color="#4b555a" metalness={.8}/></mesh></group>)}</group>
+ <group ref={boosters}>{[-1,1].map(side=><group key={side} position={[side*.52,0,0]}><mesh position={[0,-.25,0]}><cylinderGeometry args={[.17,.2,1.9,16]}/><meshStandardMaterial color="#686e86" metalness={.5} roughness={.5}/></mesh><mesh position={[0,.89,0]}><coneGeometry args={[.17,.4,16]}/><meshStandardMaterial color="#8b91a6"/></mesh><mesh position={[0,-1.3,0]}><cylinderGeometry args={[.12,.2,.25,16]}/><meshStandardMaterial color="#4b555a" metalness={.8}/></mesh></group>)}</group>
  <group ref={wings}>{[-1,1].map(side=><group key={side} position={[side*1.15,-.2,0]}><mesh><boxGeometry args={[1.6,.7,.045]}/><meshStandardMaterial color="#1c4675" metalness={.5} roughness={.35}/></mesh>{[-.6,-.2,.2,.6].map(x=><mesh key={x} position={[x,0,.028]}><boxGeometry args={[.018,.7,.01]}/><meshBasicMaterial color="#83a9bb"/></mesh>)}<mesh position={[0,0,.028]}><boxGeometry args={[1.6,.02,.01]}/><meshBasicMaterial color="#83a9bb"/></mesh></group>)}</group>
  <group ref={legs}>{[0,1,2,3].map(i=><group key={i} rotation={[0,i*Math.PI/2,0]}><mesh position={[.51,-1.26,0]} rotation={[0,0,-.5]}><cylinderGeometry args={[.025,.025,.9,8]}/><meshStandardMaterial color="#9ba6ab" metalness={.8}/></mesh><mesh position={[.72,-1.65,0]}><boxGeometry args={[.3,.04,.2]}/><meshStandardMaterial color="#5f6c72"/></mesh></group>)}</group>
  <group ref={exhaust} position={[0,-1.55,0]}><mesh position={[0,-1.1,0]} rotation={[Math.PI,0,0]}><coneGeometry args={[.28,2.2,20]}/><meshBasicMaterial color="#6ebce5" transparent opacity={.45} blending={THREE.AdditiveBlending} depthWrite={false}/></mesh><mesh position={[0,-.65,0]} rotation={[Math.PI,0,0]}><coneGeometry args={[.17,1.3,16]}/><meshBasicMaterial color="#fff2b6" transparent opacity={.9} blending={THREE.AdditiveBlending} depthWrite={false}/></mesh><pointLight color="#79caff" intensity={3} distance={5}/></group>

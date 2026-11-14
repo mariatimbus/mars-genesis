@@ -1,11 +1,12 @@
 import { beforeEach,describe,it,expect,vi } from 'vitest';
-import { STARTUP_CHALLENGES } from '../simulation/commissioning';
+import { commissionAll } from '../simulation/testHelpers';
+import { facilityUnlocked } from '../simulation/commissioning';
 import { initialBuildings } from '../simulation/engine';
 const memory=new Map<string,string>();
 vi.stubGlobal('localStorage',{getItem:(k:string)=>memory.get(k)??null,setItem:(k:string,v:string)=>memory.set(k,v),removeItem:(k:string)=>memory.delete(k)});
 vi.stubGlobal('window',{localStorage:globalThis.localStorage});
-const {useGame}=await import('./game');
-beforeEach(()=>{useGame.getState().reset(2026,'commander','solar-watch');for(const c of STARTUP_CHALLENGES)useGame.getState().answerStartup(c.kind,c.options.find(o=>o.correct)!.id)});
+const {useGame,simulationSnapshot}=await import('./game');
+beforeEach(()=>{useGame.getState().reset(2026,'commander','solar-watch');useGame.setState(commissionAll(simulationSnapshot(useGame.getState())))});
 describe('player actions and saves',()=>{
  it('rejects overlaps without spending resources',()=>{useGame.getState().build('solar');expect(useGame.getState().place(0,0)).toBe(false);expect(useGame.getState().resources.materials).toBe(160)});
  it('constructs a facility and charges the published cost',()=>{useGame.getState().build('solar');expect(useGame.getState().place(20,-18)).toBe(true);expect(useGame.getState().buildings).toHaveLength(initialBuildings.length+1);expect(useGame.getState().resources.materials).toBe(125)});
@@ -77,17 +78,27 @@ describe('startup actions and persistence',()=>{
   expect(useGame.getState().buildings).toEqual(before.buildings);expect(useGame.getState().resources).toEqual(before.resources);
  });
  it('preserves completed challenges, unsuccessful attempts and offline facilities after reload',async()=>{
-  useGame.getState().completePrologue();useGame.getState().answerStartup('solar','battery');useGame.getState().answerStartup('solar','align');useGame.getState().answerStartup('water','unlimited');
+  useGame.getState().completePrologue();useGame.getState().trainingAction('dust',{type:'wipe',index:0});useGame.getState().trainingAction('dust',{type:'wipe',index:0});
   const expected=structuredClone({commissioning:useGame.getState().commissioning,buildings:useGame.getState().buildings});
   const saved=memory.get('mars-genesis-survival')!;useGame.getState().reset();memory.set('mars-genesis-survival',saved);await useGame.persist.rehydrate();
   expect(useGame.getState().prologueSeen).toBe(true);expect({commissioning:useGame.getState().commissioning,buildings:useGame.getState().buildings}).toEqual(expected);
   expect(useGame.getState().sol).toBe(1);useGame.getState().next();expect(useGame.getState().sol).toBe(1);
  });
+ it('keeps a partially commissioned version 5 mission and adds the trainer without a reset',async()=>{
+  const state=JSON.parse(memory.get('mars-genesis-survival')!).state;
+  state.sol=1;state.prologueSeen=true;state.commissioning={completed:['solar','habitat'],attempts:{solar:2},feedback:null};
+  state.buildings=state.buildings.map((b:{kind:string;active:boolean})=>({...b,active:b.kind==='solar'||b.kind==='habitat'}));
+  const before=structuredClone({resources:state.resources,buildings:state.buildings,astronauts:state.astronauts});
+  memory.set('mars-genesis-survival',JSON.stringify({version:5,state}));await useGame.persist.rehydrate();
+  expect(useGame.getState().commissioning.completed).toEqual(['solar']);expect(useGame.getState().commissioning.attempts.solar).toBe(2);expect(facilityUnlocked(useGame.getState(),'habitat')).toBe(true);expect(facilityUnlocked(useGame.getState(),'oxygen')).toBe(false);
+  expect(useGame.getState().commissioning.training.records).toEqual({});expect(useGame.getState().prologueSeen).toBe(true);
+  expect({resources:useGame.getState().resources,buildings:useGame.getState().buildings,astronauts:useGame.getState().astronauts}).toEqual(before);
+ });
  it('preserves completed flight state when upgrading a version 4 mission',async()=>{
   const state=JSON.parse(memory.get('mars-genesis-survival')!).state;state.sol=8;state.prologueSeen=true;delete state.commissioning;
   state.buildings=state.buildings.filter((b:{kind:string})=>!['water','medical'].includes(b.kind));
   memory.set('mars-genesis-survival',JSON.stringify({version:4,state}));await useGame.persist.rehydrate();
-  expect(useGame.getState().sol).toBe(8);expect(useGame.getState().prologueSeen).toBe(true);expect(useGame.getState().commissioning.completed).toHaveLength(7);
+  expect(useGame.getState().sol).toBe(8);expect(useGame.getState().prologueSeen).toBe(true);expect(useGame.getState().commissioning.completed).toHaveLength(6);
   expect(useGame.getState().buildings.some(b=>b.kind==='medical')).toBe(true);expect(useGame.getState().buildings.some(b=>b.kind==='water')).toBe(true);
  });
 });

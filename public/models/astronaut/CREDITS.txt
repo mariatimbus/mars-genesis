@@ -1,0 +1,20 @@
+ARES ONE — ASTRONAUT MODEL CREDITS
+
+Primary asset: Neil Armstrong Space Suit (Apollo 11), Smithsonian 3D scan.
+Providers: Smithsonian Digitization Programs Office and National Air and Space Museum.
+Asset mirror: https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb
+Source: https://3d.si.edu/object/3d/neil-armstrong-spacesuit:d8c63ba6-4ebc-11ea-b77f-2e728ce88125
+Accessible collection record: https://avpreservation.si.edu/edan-record/3d_package%3Ad8c63ba6-4ebc-11ea-b77f-2e728ce88125
+Terms: https://www.si.edu/termsofuse
+
+Usage conditions apply. This scan is NOT designated CC0.
+The collection record restricts these files to non-commercial, educational and personal use.
+Included here for this educational Mars survival trainer. Commercial distribution
+requires replacement with a suitably licensed model or permission from the rights holder.
+
+Adaptations performed in code: normalized character height; cloned PBR materials;
+subtle breathing and head-turn animation; procedural walking gait and reclining
+sleep pose; added fictional life-support pack, hose and crew color details.
+The pack is hidden during the sleep pose. The GLB scan itself is unchanged.
+The fictional Mars crew is not Neil Armstrong; the historical suit is a visual reference,
+not a claim of suitability for actual Mars EVA or endorsement by Smithsonian/NASA.
