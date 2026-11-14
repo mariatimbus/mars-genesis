@@ -1,0 +1,6 @@
+node_modules
+dist
+Assets
+Documentation
+Scripts
+*.tsbuildinfo

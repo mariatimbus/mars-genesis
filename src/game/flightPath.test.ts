@@ -1,0 +1,13 @@
+import { describe,expect,it } from 'vitest';
+import { flightPose,flightPosition,flightChapter,elapsedEarthDays,advanceFlight,enginePower,EARTH_POSITION,EARTH_RADIUS,MARS_POSITION,MARS_RADIUS,MISSION_TRAVEL_DAYS,FLIGHT_DURATION_SECONDS } from './flightPath';
+const distance=(a:number[],b:number[])=>Math.hypot(...a.map((v,i)=>v-b[i]));
+describe('Earth-to-Mars cinematic flight',()=>{
+ it('launches just above Earth and lands just above Mars',()=>{expect(distance(flightPosition(0),EARTH_POSITION)).toBeCloseTo(EARTH_RADIUS+.8);expect(distance(flightPosition(1),MARS_POSITION)).toBeCloseTo(MARS_RADIUS+.8)});
+ it('has no position jumps at stage transitions',()=>{for(const p of [.18,.72,.9])expect(distance(flightPosition(p-.000001),flightPosition(p+.000001))).toBeLessThan(.001)});
+ it('keeps the rocket outside both planet surfaces and its orientation finite',()=>{for(let i=0;i<=1000;i++){const pose=flightPose(i/1000);expect(distance(pose.position,EARTH_POSITION)).toBeGreaterThan(EARTH_RADIUS);expect(distance(pose.position,MARS_POSITION)).toBeGreaterThan(MARS_RADIUS);expect(Math.hypot(...pose.direction)).toBeCloseTo(1);expect(pose.position.every(Number.isFinite)).toBe(true)}});
+ it('advances a 210-Earth-day mission clock monotonically without advancing colony sols',()=>{let last=0;for(let i=0;i<=1000;i++){const days=elapsedEarthDays(i/1000);expect(days).toBeGreaterThanOrEqual(last);last=days;}expect(elapsedEarthDays(0)).toBe(0);expect(elapsedEarthDays(1)).toBeCloseTo(MISSION_TRAVEL_DAYS);expect(MISSION_TRAVEL_DAYS/365.25).toBeCloseTo(.575,2)});
+ it('compresses the flight into the configured duration and clamps replay/timeline inputs',()=>{expect(advanceFlight(0,FLIGHT_DURATION_SECONDS)).toBe(1);expect(advanceFlight(.5,-10)).toBe(.5);expect(advanceFlight(.9,20)).toBe(1);expect(flightPosition(-2)).toEqual(flightPosition(0));expect(flightPosition(3)).toEqual(flightPosition(1))});
+ it('holds the background at each chapter boundary until the reader continues',()=>{expect(advanceFlight(.17,20,.18)).toBe(.18);expect(advanceFlight(.18,20,.18)).toBe(.18);expect(advanceFlight(.18,1,.72)).toBeGreaterThan(.18);expect(advanceFlight(.71,20,.72)).toBe(.72);expect(advanceFlight(.89,20,.9)).toBe(.9);expect(advanceFlight(.99,20,1)).toBe(1)});
+ it('coasts without continuous engine firing and shuts engines off after touchdown',()=>{expect(enginePower(.05)).toBe(1);expect(enginePower(.5)).toBe(0);expect(enginePower(.95)).toBeGreaterThan(0);expect(enginePower(1)).toBe(0)});
+ it('keeps chapter navigation synchronized to the actual rocket phase',()=>{expect([0,.18,.72,.9,1].map(flightChapter)).toEqual([0,1,2,3,3])});
+});

@@ -1,0 +1,11 @@
+{
+  "freshness": "archived",
+  "verified": "2026-11-13",
+  "solar": {"sourceId":"solar-2024","date":"2024-05-14T16:51:00Z","flareClass":"X8.7","xClassMagnitude":8.7},
+  "solarSequence": {"sourceId":"solar-2024b","startDate":"2024-05-10","endDate":"2024-05-16","xClassFlareCount":9},
+  "dust": {"sourceId":"dust-2018","date":"2018-06-10","opticalDepth":10.8,"unit":"dimensionless"},
+  "weather": {"sourceId":"meda-2021","dates":["2021-04-03","2021-04-04"],"highC":-22,"lowC":-83},
+  "radiation": {"sourceId":"rad-2013","period":"2012-08 to 2013-06","doseEquivalentMsvPerEarthDay":0.67},
+  "oxygen": {"sourceId":"life-support","referenceDate":"2021-04-21","kgPerPersonPerEarthDay":0.84},
+  "communications": {"sourceId":"communications","referenceDate":"2021","oneWayMinMinutes":3,"oneWayMaxMinutes":22}
+}

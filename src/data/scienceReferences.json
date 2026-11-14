@@ -1,0 +1,122 @@
+[
+  {
+    "id": "solar-2024",
+    "title": "A powerful solar flare",
+    "instrument": "NASA Solar Dynamics Observatory",
+    "dataset": "SDO archived flare observation",
+    "observed": "2024-05-14 16:51 UTC",
+    "verified": "2026-11-13",
+    "category": "measurement",
+    "values": "X8.7 flare; peak 12:51 p.m. EDT (16:51 UTC)",
+    "url": "https://svs.gsfc.nasa.gov/14592/",
+    "note": "Solar observation, not a Mars surface dose. Our scenario separately models protection and exposure. DONKI network retrieval was unavailable; this verified SDO archive is the offline historical trigger."
+  },
+  {
+    "id": "solar-2024b",
+    "title": "Continued solar activity",
+    "instrument": "NASA Solar Dynamics Observatory",
+    "dataset": "SDO May 15–16 flare archive",
+    "observed": "2024-05-15–2024-05-16",
+    "verified": "2026-11-13",
+    "category": "measurement",
+    "values": "SDO recorded continuing X-class activity; nine X-class flares during May 10–16.",
+    "url": "https://svs.gsfc.nasa.gov/14593/",
+    "note": "An alternative historical trigger. Modeled colony exposure is not inferred directly from flare class."
+  },
+  {
+    "id": "dust-2018",
+    "title": "Sunlight lost to Martian dust",
+    "instrument": "NASA Opportunity rover",
+    "dataset": "2018 global dust storm, JPL recovery archive",
+    "observed": "2018-06-10",
+    "verified": "2026-11-13",
+    "category": "measurement",
+    "values": "Last measured optical depth (tau): 10.8 (dimensionless)",
+    "url": "https://www.jpl.nasa.gov/news/six-things-about-opportunitys-recovery-efforts/",
+    "note": "Larger optical depth means less sunlight. The game's 18–35% solar yield and 3-sol storm are balancing assumptions, not a reproduction of Opportunity's energy curve."
+  },
+  {
+    "id": "meda-2021",
+    "title": "Weather at Jezero Crater",
+    "instrument": "Perseverance MEDA",
+    "dataset": "First MEDA weather report; archived NASA report",
+    "observed": "2021-04-03–2021-04-04 (sols 43–44)",
+    "verified": "2026-11-13",
+    "category": "measurement",
+    "values": "Air temperature high −22 °C; low −83 °C",
+    "url": "https://www.nasa.gov/directorates/stmd/nasas-first-weather-report-from-jezero-crater-on-mars/",
+    "note": "Archived extrema inform the modeled temperature cycle and extra heating demand. The game does not stream calibrated MEDA time-series products. The PDS archive is linked separately."
+  },
+  {
+    "id": "meda-pds",
+    "title": "MEDA science archive",
+    "instrument": "Perseverance MEDA",
+    "dataset": "NASA PDS Atmospheres Node",
+    "observed": "Mars 2020 mission archive; releases vary",
+    "verified": "2026-11-13",
+    "category": "reference",
+    "values": "Air temperature, pressure, humidity, wind, radiation and dust sensors",
+    "url": "https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/meda.html",
+    "note": "MEDA's Radiation and Dust Sensor measures optical radiation and dust, not astronaut ionizing dose. Use Curiosity RAD for the ionizing-radiation teaching reference."
+  },
+  {
+    "id": "rad-2013",
+    "title": "Radiation measured on Mars",
+    "instrument": "Curiosity RAD",
+    "dataset": "Gale Crater surface radiation study",
+    "observed": "2012-08–2013-06",
+    "verified": "2026-11-13",
+    "category": "measurement",
+    "values": "Average dose equivalent: 0.67 mSv per Earth day in this observation interval",
+    "url": "https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/",
+    "note": "A location- and time-specific historical average, not today's Mars-wide rate. Multiplied by 24.6597/24 for the illustrative per-sol metric. It never directly changes health scores."
+  },
+  {
+    "id": "life-support",
+    "title": "Planning breathable air",
+    "instrument": "NASA life-support engineering",
+    "dataset": "Life Support presentation, 2021",
+    "observed": "2021-04-21 (engineering reference)",
+    "verified": "2026-11-13",
+    "category": "reference",
+    "values": "Nominal metabolic oxygen planning value: 0.84 kg per person per Earth day",
+    "url": "https://ntrs.nasa.gov/api/citations/20210013975/downloads/Life%20Support%20Presentation%20to%20Space%20Portal%2004_21_2021%20V2.pdf",
+    "note": "Converted to 0.863 kg/person/sol using 24.6597/24. Activity, diet and individual physiology vary; this is a simplified planning model."
+  },
+  {
+    "id": "communications",
+    "title": "Messages take time",
+    "instrument": "NASA Mars communications engineering",
+    "dataset": "Perseverance communications explanation",
+    "observed": "2021 (reference, not a current distance measurement)",
+    "verified": "2026-11-13",
+    "category": "reference",
+    "values": "Earth-to-Mars one-way radio delay: approximately 3–22 minutes",
+    "url": "https://science.nasa.gov/blog/speaking-percys-language-how-to-talk-so-perseverance-will-listen/",
+    "note": "The scenario chooses a one-way delay within that range. Waiting uses a fractional sol for a round-trip plus 60 minutes of planning, not an entire sol of signal travel."
+  },
+  {
+    "id": "osdr-661",
+    "title": "Why space biology needs careful interpretation",
+    "instrument": "NASA OSDR study OSD-661",
+    "dataset": "Mouse muscle and bone research across spaceflight studies",
+    "observed": "Archived study; about 30 days of spaceflight",
+    "verified": "2026-11-13",
+    "category": "reference",
+    "values": "Mouse tissue research examines GSK3 and muscle/bone responses; it is not a human survival calculator.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-661",
+    "note": "Used only for qualitative educational context about living systems and research. No mouse outcome is converted to human health loss or mortality probability."
+  },
+  {
+    "id": "travel-time",
+    "title": "How long does the journey take?",
+    "instrument": "NASA Kennedy Space Center / Mars mission engineering",
+    "dataset": "Rocket Ranch, Episode 1: Mars; mission planning reference",
+    "observed": "2018 (reference, not a live mission estimate)",
+    "verified": "2026-11-13",
+    "category": "reference",
+    "values": "Typical Earth-to-Mars travel: six to nine months one way, roughly 0.5–0.75 Earth years.",
+    "url": "https://www.nasa.gov/podcasts/welcome-to-rocket-ranch/episode-1-mars/",
+    "note": "Trajectory, departure window and propulsion affect transit time. This cinematic chooses 210 Earth days (about seven months or 0.57 years) and compresses them into 60 seconds. Its path, planet spacing, booster sequence and landing are illustrations, not orbital flight predictions. A round-trip mission also needs a surface stay and return flight."
+  }
+]
