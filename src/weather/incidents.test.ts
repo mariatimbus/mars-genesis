@@ -4,18 +4,19 @@ import { facilityUnlocked,migrateTraining } from '../simulation/commissioning';
 import { calculateOperations } from '../simulation/lifeSupport';
 import { solveTraining,circuitSolution } from '../training/testHelpers';
 import { applyTraining,restartTrainingTask,taskAvailable,type TaskAction } from '../training/engine';
+import { advanceChallengeClock,retryRemaining } from '../training/attempts';
 import { tasks,type TaskId } from '../training/catalog';
 import type { SurvivalState } from '../simulation/types';
-import { enterSurfaceSol,repairSurfaceIncident } from './incidentActions';
-import { activeSurfaceIncidents,SURFACE_INCIDENTS,taskSuspended,roomSuspended,type SurfaceIncidentId } from './incidents';
+import { enterSurfaceSol,repairSurfaceIncident,acknowledgeSurfaceIncident } from './incidentActions';
+import { activeSurfaceIncidents,followupTask,pendingIncidentTasks,SURFACE_INCIDENTS,taskSuspended,roomSuspended,type SurfaceIncidentId } from './incidents';
 import { connectSurfaceIncidents } from './bridge';
 import { useGame,simulationSnapshot } from '../store/game';
 import { useSurfaceWeather } from './store';
 
-function repair(s:SurvivalState,id:SurfaceIncidentId){
+function repair(s:SurvivalState,id:SurfaceIncidentId,target?:TaskId){
  let state=s;const event=SURFACE_INCIDENTS.find(e=>e.id===id)!;
- const act=(type:string,index?:number,value?:number)=>{state=repairSurfaceIncident(state,id,{type,index,value})};
- switch(event.task){
+ const act=(type:string,index?:number,value?:number)=>{state=repairSurfaceIncident(state,id,{type,index,value},target)};
+ switch(target??event.task){
   case 'lights':act('light',0,60);act('light',1,40);act('light',2,10);act('test');break;
   case 'dust':for(let pass=0;pass<8;pass++)for(let i=0;i<12;i++)act('wipe',i);break;
   case 'battery':for(const [color,cells] of circuitSolution)for(const cell of cells)act('draw',cell,color);act('connect');break;
@@ -129,4 +130,55 @@ describe('surface day / mission bridge',()=>{
   g().trainingAction('lights',{type:'begin-attempt'});for(const [index,value] of [60,40,10].entries())g().trainingAction('lights',{type:'light',index,value});
   g().trainingAction('lights',{type:'test'});expect(w().blocked).toBe(false);
  });
+});
+
+describe('astronaut briefings and deferred cross-room repairs',()=>{
+ it('requires a different-room check for every event and persists that obligation without altering achievements',()=>{
+  for(const event of SURFACE_INCIDENTS){
+   let s=enterSurfaceSol(solveTraining(createScenario()),event.sol);
+   const before=structuredClone(s.commissioning.training.records),credits=s.commissioning.training.credits;
+   s=acknowledgeSurfaceIncident(s,event.id,true);
+   expect(s.commissioning.training.incidents?.briefed).toContain(event.id);
+   expect(tasks.find(t=>t.id===followupTask[event.id])!.room).not.toBe(tasks.find(t=>t.id===event.task)!.room);
+   s=migrateTraining(JSON.parse(JSON.stringify(s)));
+   s=repair(s,event.id);
+   expect(activeSurfaceIncidents(s).map(e=>e.id)).toContain(event.id);
+   expect(pendingIncidentTasks(s,event)).toEqual([followupTask[event.id]]);
+   expect(taskSuspended(s,event.task)).toBe(true);
+   expect(nextSol(s)).toBe(s);
+   s=repair(s,event.id,followupTask[event.id]);
+   expect(activeSurfaceIncidents(s).map(e=>e.id)).not.toContain(event.id);
+   expect(s.commissioning.training.records).toEqual(before);expect(s.commissioning.training.credits).toBe(credits);
+  }
+ });
+ it('accepts either completion order, refuses unrelated tasks and cannot reset a follow-up by pressing Later again',()=>{
+  let s=acknowledgeSurfaceIncident(enterSurfaceSol(createScenario(),313),'regional-dust',true);
+  s=repairSurfaceIncident(s,'regional-dust',{type:'choose',index:0},'filter');
+  const board=s.commissioning.training.incidents?.repairs.filter;
+  s=acknowledgeSurfaceIncident(s,'regional-dust',true);
+  expect(s.commissioning.training.incidents?.repairs.filter).toEqual(board);
+  expect(repairSurfaceIncident(s,'regional-dust',{type:'test'},'lights')).toBe(s);
+  s=repair(s,'regional-dust','filter');expect(activeSurfaceIncidents(s).map(e=>e.id)).toContain('regional-dust');
+  s=repair(s,'regional-dust');expect(activeSurfaceIncidents(s).map(e=>e.id)).not.toContain('regional-dust');
+ });
+ it('immediate Resolve adds no follow-up; replayed events receive a fresh briefing and no old deferral',()=>{
+  let s=acknowledgeSurfaceIncident(enterSurfaceSol(createScenario(),284),'ice-clouds');
+  expect(pendingIncidentTasks(s,SURFACE_INCIDENTS[0])).toEqual(['lights']);
+  s=repair(s,'ice-clouds');s=enterSurfaceSol(s,284,true);
+  expect(s.commissioning.training.incidents?.briefed).not.toContain('ice-clouds');
+  expect(s.commissioning.training.incidents?.deferred?.['ice-clouds']).toBeUndefined();
+ });
+});
+
+it('applies failure cooldowns to the deferred follow-up without losing either mandatory repair',()=>{
+ let s=acknowledgeSurfaceIncident(enterSurfaceSol(createScenario(),313),'regional-dust',true);
+ s=repairSurfaceIncident(s,'regional-dust',{type:'begin-attempt'},'filter');
+ s=repairSurfaceIncident(s,'regional-dust',{type:'run'},'filter');
+ expect(s.commissioning.training.runs?.repair.filter?.status).toBe('failed');
+ expect(retryRemaining(s,'filter','repair')).toBe(30);
+ expect(repairSurfaceIncident(s,'regional-dust',{type:'begin-attempt'},'filter')).toBe(s);
+ s=migrateTraining(JSON.parse(JSON.stringify(s)));for(let i=0;i<60;i++)s=advanceChallengeClock(s,.5);
+ s=repairSurfaceIncident(s,'regional-dust',{type:'begin-attempt'},'filter');s=repair(s,'regional-dust','filter');
+ expect(pendingIncidentTasks(s,SURFACE_INCIDENTS[1])).toEqual(['dust']);
+ s=repair(s,'regional-dust');expect(activeSurfaceIncidents(s).map(e=>e.id)).not.toContain('regional-dust');
 });

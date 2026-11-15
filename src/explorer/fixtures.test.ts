@@ -4,6 +4,7 @@ import { Quaternion, Euler } from 'three';
 import { initialBuildings } from '../simulation/engine';
 import { CELL, FLOOR, cellKey, makeLayout, doorIsOpen } from './layout';
 import { circulation, makeFixtures, crewFixture, overlaps, solarPlacements, exteriorClear, terrainHeight } from './fixtures';
+import { shellParts } from './BaseShell';
 import { createWalker } from './movement';
 
 const layout=makeLayout(initialBuildings),fixtures=makeFixtures(layout);
@@ -55,13 +56,8 @@ describe('unobstructed base circulation',()=>{
  });
  it('walks the real physics capsule from spawn to every room with furniture and walls present',()=>{
   const world=new RAPIER.World({x:0,y:-3.71,z:0}),fixed=world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-  world.createCollider(RAPIER.ColliderDesc.cuboid(120,.18,120).setTranslation(0,FLOOR-.18,0),fixed);
-  for(const key of layout.cells){const [ix,iz]=key.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
-   if(layout.cells.has(cellKey(ix+dx,iz+dz)))continue;
-   const x=(ix+dx*.5)*CELL,z=(iz+dz*.5)*CELL;
-   if(Math.abs(x-layout.airlock.x)<.1&&Math.abs(z-layout.airlock.outerZ)<.1)continue;
-   world.createCollider(RAPIER.ColliderDesc.cuboid(dx?.11:1.5,1.6,dz?.11:1.5).setTranslation(x,FLOOR+1.6,z),fixed);
-  }}
+  // Exercise the exact solids used by the batched renderer, including trims.
+  for(const p of Object.values(shellParts(layout)).flat().filter(p=>p.solid))world.createCollider(RAPIER.ColliderDesc.cuboid(p.size[0]/2,p.size[1]/2,p.size[2]/2).setTranslation(...p.position),fixed);
   const occupied=[...fixtures];for(let i=0;i<3;i++)crewFixture(layout,layout.habitat,occupied,`npc-${i}`);
   for(const f of occupied){const q=new Quaternion().setFromEuler(new Euler(0,f.rotation,0));world.createCollider(RAPIER.ColliderDesc.cuboid(f.size[0]/2,f.type==='terminal'?.35:f.size[1]/2,f.size[2]/2).setTranslation(f.x,FLOOR+(f.type==='terminal'?1.45:f.size[1]/2),f.z).setRotation(q),fixed)}
   const body=world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased()),collider=world.createCollider(RAPIER.ColliderDesc.capsule(.55,.35),body),walker=createWalker(world);

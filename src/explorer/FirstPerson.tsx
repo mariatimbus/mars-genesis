@@ -1,12 +1,16 @@
+import { RenderBudget } from './RenderBudget';
+import { FrameProbe,FrameReadout,profiling } from './FrameProbe';
 import { hasSystemLocks,hasSurfaceIncidents } from '../weather/incidents';
 import { WeatherHUD, WeatherSkipControls } from '../weather/WeatherPanel';
+import { BaseAlert } from '../weather/BaseEmergencyBanner';
 import { CrewClock, CrewTimeControls } from '../characters/CrewClock';
 import { useCrewLife } from '../characters/crewStore';
 import { activityLabel } from '../characters/crewRoutine';
 import { Suspense, useCallback, useEffect, useMemo, useState, Component, type ReactNode } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Wind, Heart, Activity, X, Footprints, Shield, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Wind, Heart, Activity, X, Shield, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Astronaut, Base } from './World';
 import { BaseMap } from './BaseMap';
 import { MarsExterior, MarsSky } from './Exterior';
@@ -70,28 +74,45 @@ function TabletPanel(){
 }
 function HUD({layout:l,onPreview}:{layout:ReturnType<typeof makeLayout>;onPreview:(view:'surface'|'interior')=>void}){
  const returnHome=useCallback(()=>useExplorer.getState().returnToBase(l),[l]);
- const g=useGame(),e=useExplorer(),player=g.astronauts.find(c=>c.id===e.playerId)??g.astronauts[0];
- const forecast=calculateOperations(simulationSnapshot(g)).report,support=!commissioningComplete(g)||(forecast.safeHabitat&&forecast.co2Removal&&g.systems.co2Percent<.8),where=e.activeRover?'PRESSURIZED ROVER CABIN':environmentAt(l,e.position,e.pressure,support),safe=!!e.activeRover||(inAirlock(l,e.position)?e.pressure>.99:l.cells.has(`${Math.round(e.position[0]/3)},${Math.round(e.position[2]/3)}`)&&support);
- const objective=hasSystemLocks(g)?'Maintenance lock / restore the interrupted step':g.pendingEvent?'Mission alarm / check tablet':!commissioningComplete(g)?`Wake the colony / ${Object.keys(g.commissioning.training.records).length}/18 experiments`:!g.flags.includes('eva-relay-repaired')?'Repair the external relay':'Colony operational / advance sols from your tablet';
- return <div className={`fps-hud ${hasSurfaceIncidents(g)?'has-base-alert':''}`}>
- <div className="fps-top"><div><span className="fps-eyebrow">MARS / GENESIS</span><strong>{where}</strong></div></div>
- <div className="fps-objective"><span className="fps-eyebrow">OBJECTIVE</span>{objective}{!g.flags.includes('eva-relay-repaired')&&<small>SIMULATED FAILURE · solar output −35%</small>}</div>
- {e.locked&&!e.panel&&<><div className="fps-crosshair"/>{e.target&&<div className="fps-prompt"><kbd>E</kbd>{e.target.label}</div>}</>}
- <div className="fps-vitals"><span><Heart size={17}/><strong>{player.health.toFixed(0)}</strong><small>HEALTH</small></span><span className={!safe&&e.oxygen<25?'warning':''}><Wind size={17}/><strong>{e.activeRover?'CABIN':e.suited?e.oxygen.toFixed(0):safe?'CABIN':'NO SUIT'}</strong><small>{e.suited?'SUIT O₂ %':'OXYGEN'}</small></span><span><Activity size={17}/><strong>{player.fatigue.toFixed(0)}%</strong><small>FATIGUE</small></span><span className="fps-eva-time">{e.suited?<Shield size={17}/>:<Footprints size={17}/>}<strong>{e.suited?`${Math.max(0,480-Math.floor(e.evaSeconds))}s`:'UNSUITED'}</strong><small>SIMULATED EVA</small></span></div>
- <CrewClock/><WeatherHUD onSkip={returnHome}/><BaseMap layout={l}/><ExpeditionHUD layout={l}/><div className="fps-movement-help">WASD / ↑ ↓ ← → <span>MOVE</span> · SHIFT <span>FAST ×3</span> · E <span>USE / DOOR</span> · M <span>LOCAL MAP</span></div>
- <div className="fps-model-label">SIMULATION · {player.radiationMsv.toFixed(3)} mSv modeled exposure</div>
+ const g=useGame(),e=useExplorer(useShallow(s=>({playerId:s.playerId,notice:s.notice,activeRover:s.activeRover,position:s.position,pressure:s.pressure,suited:s.suited,oxygen:s.oxygen,evaSeconds:s.evaSeconds,cycle:s.cycle,locked:s.locked,panel:s.panel,pauseOpen:s.pauseOpen,briefing:s.briefing,target:s.target,ready:s.ready,rovers:s.rovers,returnToBase:s.returnToBase,modeTo:s.modeTo,boardRover:s.boardRover,open:s.open}))),player=g.astronauts.find(c=>c.id===e.playerId)??g.astronauts[0];
+ useEffect(()=>{const notice=e.notice;if(!notice)return;const timer=setTimeout(()=>{if(useExplorer.getState().notice===notice)useExplorer.getState().notify('')},6000);return()=>clearTimeout(timer)},[e.notice]);
+ const forecast=useMemo(()=>calculateOperations(simulationSnapshot(g)).report,[g]),support=!commissioningComplete(g)||(forecast.safeHabitat&&forecast.co2Removal&&g.systems.co2Percent<.8),where=e.activeRover?'PRESSURIZED ROVER CABIN':environmentAt(l,e.position,e.pressure,support),safe=!!e.activeRover||(inAirlock(l,e.position)?e.pressure>.99:l.cells.has(`${Math.round(e.position[0]/3)},${Math.round(e.position[2]/3)}`)&&support);
+ const objective=hasSystemLocks(g)?'Repair the marked system':g.pendingEvent?'Review the mission alarm':!commissioningComplete(g)?`Activate the base · ${Object.keys(g.commissioning.training.records).length}/18`:!g.flags.includes('eva-relay-repaired')?'Repair the external relay':'Base online · continue the mission';
+ return <div className={`fps-hud ${e.pauseOpen&&!e.briefing?'is-paused':'is-exploring'} ${e.panel?'is-panel-open':''} ${hasSurfaceIncidents(g)?'has-base-alert':''}`}>
+ <div className="hud-left-column">
+  <div className="fps-top"><div><span className="fps-eyebrow">ARES ONE</span><strong>{where}</strong></div></div>
+  <div className="hud-status-strip"><CrewClock compact/><WeatherHUD compact onSkip={returnHome}/></div>
+  <div className="fps-objective"><span className="fps-eyebrow">CURRENT OBJECTIVE</span><strong>{objective}</strong></div>
+ </div>
+ <div className="hud-right-column"><BaseMap layout={l}/><BaseAlert inline/></div>
+ {e.locked&&!e.panel&&<><div className="fps-crosshair"/><div className="hud-context-column">{e.notice&&<div className="fps-notice" role="status">{e.notice}</div>}{e.target&&<div className="fps-prompt"><kbd>E</kbd>{e.target.label}</div>}<ExpeditionHUD/></div></>}
+ <div className="fps-vitals"><span><Heart size={17}/><strong>{player.health.toFixed(0)}</strong><small>HEALTH</small></span><span className={!safe&&e.oxygen<25?'warning':''}><Wind size={17}/><strong>{e.activeRover?'CABIN':e.suited?e.oxygen.toFixed(0):safe?'CABIN':'NO SUIT'}</strong><small>{e.suited?'SUIT O₂ %':'OXYGEN'}</small></span><span><Activity size={17}/><strong>{player.fatigue.toFixed(0)}%</strong><small>FATIGUE</small></span><>{!safe&&e.suited&&<span className="fps-eva-time"><Shield size={17}/><strong>{Math.max(0,480-Math.floor(e.evaSeconds))}s</strong><small>EVA TIME</small></span>}</></div>
+ <div className="fps-movement-help"><kbd>WASD</kbd> move <span>·</span> <kbd>E</kbd> interact <span>·</span> <kbd>Esc</kbd> menu</div>
+ {!safe&&<div className="fps-model-label">MODELED EXPOSURE · {player.radiationMsv.toFixed(3)} mSv</div>}
  {(!safe&&!e.suited||!safe&&e.oxygen<25||e.cycle>0||g.pendingEvent)&&<div className="fps-alarm" role="alert"><AlertTriangle size={16}/>{e.cycle>0?`Pressure cycle · ${Math.ceil(e.cycle)}s`:!safe&&!e.suited?'VACUUM · return to shelter':!safe&&e.oxygen<25?'LOW SUIT OXYGEN · return to airlock':'COLONY ALARM · check tablet'}</div>}
- {e.notice&&<div className="fps-notice" role="status">{e.notice}</div>}
- {!e.panel&&<div className={`fps-pause ${e.locked?'is-hidden':''}`}><div><span className="fps-eyebrow">YOU ARE THE ASTRONAUT</span><h1>{e.ready?'Ares One':'Loading physics…'}</h1><p>WASD or arrow keys · Mouse look · Hold Shift for 3× speed · E interact · M local map</p><button id="enter-astronaut" disabled={!e.ready||!player.alive}>{!player.alive?'Astronaut lost':e.activeRover?'Resume driving':'Explore on foot'}</button>{!e.activeRover&&<button id="deploy-rover" disabled={!e.ready||!player.alive||!e.rovers.length} onClick={()=>{const rover=e.rovers.find(r=>r.battery>1)??e.rovers[0];if(rover)e.boardRover(rover.id,true)}}>Start rover expedition</button>}<WeatherSkipControls onSkip={returnHome}/><button className="fps-secondary" onClick={()=>e.open({type:'tablet'})}>Tablet</button><button className="fps-secondary" onClick={()=>useTrainingUI.getState().show()}>Mission challenges / 18 experiments</button><CrewTimeControls/><button className="fps-secondary" onClick={()=>onPreview('interior')}>Inspect reactor room</button><button className="fps-secondary" onClick={()=>onPreview('surface')}>Surface weather · 720 sols</button><button className="fps-text-button" onClick={()=>e.returnToBase(l)}>Return to habitat</button><button className="fps-text-button" onClick={()=>e.modeTo('overview')}>Colony view</button><small>Click Explore base to activate movement. E enters rovers or uses equipment. Rover cabins protect your suit oxygen. Esc pauses.</small>{!player.alive&&g.astronauts.filter(c=>c.alive).map(c=><button key={c.id} onClick={()=>{useExplorer.setState({playerId:c.id});e.modeTo('overview');e.modeTo('first-person')}}>Continue as {c.name}</button>)}</div></div>}
+ {!e.panel&&e.pauseOpen&&!e.briefing&&<div className={`fps-pause ${e.locked||!e.pauseOpen||e.briefing?'is-hidden':''}`}><div>
+  <header className="pause-heading"><span className="fps-eyebrow">MISSION CONTROL</span><h1>{e.ready?'Ares One':'Loading physics…'}</h1><CrewClock compact/></header>
+  <p className="pause-controls">{e.activeRover?'W/S drive · A/D steer · Shift boost · Space brake · E exit':'WASD move · Mouse look · Shift sprint · E interact · M map'}</p>
+  <button id="enter-astronaut" disabled={!e.ready||!player.alive}>{!player.alive?'Astronaut lost':e.activeRover?'Resume driving':'Explore on foot'}</button>
+  {!e.activeRover&&<button id="deploy-rover" disabled={!e.ready||!player.alive||!e.rovers.length} onClick={()=>{const rover=e.rovers.find(r=>r.battery>1)??e.rovers[0];if(rover)e.boardRover(rover.id,true)}}>Start rover expedition</button>}
+  <WeatherSkipControls onSkip={returnHome}/>
+  <div className="pause-shortcuts"><button className="fps-secondary" onClick={()=>e.open({type:'tablet'})}>Tablet</button><button className="fps-secondary" onClick={()=>useTrainingUI.getState().show()}>Mission challenges</button></div>
+  <details className="pause-options"><summary>Time &amp; environment</summary><CrewTimeControls/><button className="fps-secondary" onClick={()=>onPreview('surface')}>Surface weather · 720 sols</button><button className="fps-secondary" onClick={()=>onPreview('interior')}>Inspect reactor room</button></details>
+  <details className="pause-options"><summary>Base &amp; colony views</summary><button className="fps-secondary" onClick={()=>e.returnToBase(l)}>Return to habitat</button><button className="fps-secondary" onClick={()=>e.modeTo('overview')}>Colony view</button></details>
+  {!player.alive&&g.astronauts.filter(c=>c.alive).map(c=><button key={c.id} onClick={()=>{useExplorer.setState({playerId:c.id});e.modeTo('overview');e.modeTo('first-person')}}>Continue as {c.name}</button>)}
+ </div></div>}
+
  {e.panel&&<div className="fps-panel-backdrop"><section className="fps-panel" role="dialog" aria-modal="true" aria-label="Astronaut equipment panel"><button className="fps-close" onClick={()=>e.open(null)} aria-label="Close tablet"><X size={20}/></button>{e.panel.type==='repair'?<Repair key={e.panel.id} id={e.panel.id!}/>:e.panel.type==='terminal'?<EquipmentPanel key={e.panel.id} id={e.panel.id!}/>:e.panel.type==='crew'?<CrewConversation id={e.panel.id!}/>:<TabletPanel/>}</section></div>}
+ {!e.locked&&!e.pauseOpen&&!e.panel&&!e.briefing&&<button id="enter-astronaut" className="base-resume" disabled={!e.ready}>Click to explore · Esc for Mission Control</button>}
  <MissionResults/>
  </div>;
 }
 export default function FirstPerson(){
- const trainingOpen=useTrainingUI(s=>s.open);
+ const trainingOpen=useTrainingUI(s=>s.open),briefing=useExplorer(s=>s.briefing);
  const buildings=useGame(s=>s.buildings),startFieldMission=useGame(s=>s.startFieldMission),locked=useExplorer(s=>s.locked),panel=useExplorer(s=>s.panel),[preview,setPreview]=useState<'surface'|'interior'|null>(null);
  const signature=buildings.map(b=>`${b.id}:${b.kind}:${b.x}:${b.z}`).join('|');const layout=useMemo(()=>makeLayout(buildings),[signature]);
  useEffect(()=>{startFieldMission();return()=>{document.exitPointerLock?.();useExplorer.setState({locked:false,panel:null,ready:false})}},[]);
+ useEffect(()=>{if(briefing)setPreview(null)},[briefing]);
  if(preview)return <SurfacePreview layout={layout} interior={preview==='interior'} onClose={()=>setPreview(null)}/>;
- return <main className="first-person-game"><PhysicsBoundary><Canvas frameloop={trainingOpen?'never':'always'} shadows dpr={[1,1.5]} camera={{fov:72,near:.06,far:500,position:layout.spawn}} gl={{antialias:true}} onCreated={({gl})=>{gl.toneMappingExposure=.95}}><color attach="background" args={[C.sky]}/><fog attach="fog" args={[C.fog,100,360]}/><MarsSky layout={layout}/><IndustrialLighting/><SuitReflections/><Suspense fallback={null}><Physics gravity={[0,-3.71,0]} timeStep={1/60} paused={!locked||!!panel||trainingOpen}><MarsExterior layout={layout}/><Base layout={layout}/><Astronaut layout={layout}/></Physics></Suspense></Canvas><HUD layout={layout} onPreview={view=>setPreview(view)}/></PhysicsBoundary></main>;
+ return <main className="first-person-game"><PhysicsBoundary><Canvas frameloop={trainingOpen?'never':'always'} shadows dpr={[1,1.5]} camera={{fov:72,near:.06,far:500,position:layout.spawn}} gl={{antialias:true}} onCreated={({gl})=>{gl.toneMappingExposure=.95}}><RenderBudget/>{profiling&&<FrameProbe/>}<color attach="background" args={[C.sky]}/><fog attach="fog" args={[C.fog,100,360]}/><MarsSky layout={layout}/><IndustrialLighting/><SuitReflections/><Suspense fallback={null}><Physics gravity={[0,-3.71,0]} timeStep={1/60} paused={!locked||!!panel||trainingOpen}><MarsExterior layout={layout}/><Base layout={layout}/><Astronaut layout={layout}/></Physics></Suspense></Canvas><FrameReadout/><HUD layout={layout} onPreview={view=>setPreview(view)}/></PhysicsBoundary></main>;
 }

@@ -2,14 +2,14 @@ import type { Kind } from '../simulation/engine';
 import type { SurvivalState } from '../simulation/types';
 import { roomTasks,taskById,tasks,type TaskId } from '../training/catalog';
 import { failedLessonRoots } from '../training/attempts';
-import { activeSurfaceIncidents,incidentSeverity,overallAlertSeverity,taskDependsOn } from './incidents';
+import { activeSurfaceIncidents,incidentTasks,incidentSeverity,overallAlertSeverity,taskDependsOn } from './incidents';
 
 type State=Pick<SurvivalState,'commissioning'> & {sol?:number};
 /** The alarm follows unresolved environmental incidents, not weather previews or
  * the current day's sky. A failed retry cannot silence an unresolved incident. */
 export function baseAlertState(s:State){
  const incidents=activeSurfaceIncidents(s);
- const roots=tasks.filter(t=>incidents.some(e=>e.task===t.id)).map(t=>t.id);
+ const roots=tasks.filter(t=>incidents.some(e=>incidentTasks(s,e).includes(t.id))).map(t=>t.id);
  const severity=overallAlertSeverity(s);
  return {active:roots.length>0,roots,incidents,severity};
 }

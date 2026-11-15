@@ -3,6 +3,7 @@ export interface MouseLookOptions {
  canCapture:()=>boolean;
  onCapture:(captured:boolean)=>void;
  onError:()=>void;
+ onEscape?:()=>void;
  onChange?:()=>void;
 }
 /** Delegate resume clicks: tablet/preview transitions replace the actual DOM buttons. */
@@ -21,17 +22,26 @@ export function bindMouseLook(camera:Camera,canvas:HTMLCanvasElement,options:Mou
   euler.y-=event.movementX*.002;euler.x=Math.max(-Math.PI/2+.15,Math.min(Math.PI/2-.15,euler.x-event.movementY*.002));
   camera.quaternion.setFromEuler(euler);options.onChange?.();
  };
- const resume=(event:MouseEvent)=>{
-  const button=(event.target as Element|null)?.closest?.<HTMLButtonElement>('#enter-astronaut,#deploy-rover');
-  if(!button||button.disabled||event.button>0||!options.canCapture()||pending)return;
+ const capture=()=>{
+  if(!options.canCapture()||pending)return;
   if(doc.pointerLockElement===canvas){changed();return;}
   if(typeof canvas.requestPointerLock!=='function'){fail();return;}
-  // Call inside the real click gesture; do not optimistically mark the game as locked.
   pending=true;
   try{const request=canvas.requestPointerLock();request?.catch(fail)}catch{fail()}
  };
+ const resume=(event:MouseEvent)=>{
+  const button=(event.target as Element|null)?.closest?.<HTMLButtonElement>('#enter-astronaut,#deploy-rover');
+  if(!button||button.disabled||event.button>0)return;
+  capture();
+ };
+ const escape=(event:KeyboardEvent)=>{
+  // Let the browser release a captured pointer on the first Escape. Only an
+  // already open menu handles a subsequent Escape as a close gesture.
+  if(event.key!=='Escape'||event.repeat||event.defaultPrevented||doc.pointerLockElement===canvas)return;
+  options.onEscape?.();
+ };
  const blur=()=>{options.onCapture(false);if(doc.pointerLockElement===canvas)doc.exitPointerLock?.()};
- doc.addEventListener('click',resume);doc.addEventListener('mousemove',move);doc.addEventListener('pointerlockchange',changed);doc.addEventListener('pointerlockerror',fail);view?.addEventListener('blur',blur);
+ doc.addEventListener('keydown',escape);doc.addEventListener('click',resume);doc.addEventListener('mousemove',move);doc.addEventListener('pointerlockchange',changed);doc.addEventListener('pointerlockerror',fail);view?.addEventListener('blur',blur);
  changed();
- return ()=>{connected=false;doc.removeEventListener('click',resume);doc.removeEventListener('mousemove',move);doc.removeEventListener('pointerlockchange',changed);doc.removeEventListener('pointerlockerror',fail);view?.removeEventListener('blur',blur);if(doc.pointerLockElement===canvas)doc.exitPointerLock?.();options.onCapture(false)};
+ return ()=>{connected=false;doc.removeEventListener('keydown',escape);doc.removeEventListener('click',resume);doc.removeEventListener('mousemove',move);doc.removeEventListener('pointerlockchange',changed);doc.removeEventListener('pointerlockerror',fail);view?.removeEventListener('blur',blur);if(doc.pointerLockElement===canvas)doc.exitPointerLock?.();options.onCapture(false)};
 }

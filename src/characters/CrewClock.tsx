@@ -6,7 +6,7 @@ import { nextTimeOfDay } from '../weather/timeOfDay';
 import { useGame } from '../store/game';
 import { hasSystemLocks } from '../weather/incidents';
 import './crew.css';
-export function CrewClock(){const {seconds,sol}=useSurfaceWeather(),night=nightShift(seconds);return <div className={`crew-clock ${night?'is-night':''}`} aria-label={`Habitat time ${habitatClock(seconds)}, sol ${sol}`}><span>{night?<Moon size={14}/>:<Sun size={14}/>} HABITAT TIME</span><strong>{habitatClock(seconds)}</strong><small>Sol {sol} · {night?'Night rest · 22:00–06:00':'Day shift · lights out at 22:00'}</small></div>}
+export function CrewClock({compact=false}:{compact?:boolean}){const {seconds,sol}=useSurfaceWeather(),night=nightShift(seconds);return <div className={`crew-clock ${compact?'is-compact':''} ${night?'is-night':''}`} aria-label={`Habitat time ${habitatClock(seconds)}, sol ${sol}`} title={night?'Night rest · 22:00–06:00':'Day shift · lights out at 22:00'}><span>{night?<Moon size={14}/>:<Sun size={14}/>} {compact?'LOCAL TIME':'HABITAT TIME'}</span><strong>{habitatClock(seconds)}</strong><small>Sol {sol}{!compact&&` · ${night?'Night rest · 22:00–06:00':'Day shift · lights out at 22:00'}`}</small></div>}
 export function CrewTimeControls(){
  const weather=useSurfaceWeather(),g=useGame(),[result,setResult]=useState('');
  const blocked=weather.blocked||hasSystemLocks(g),unavailable=blocked||g.status!=='playing'||!!g.pendingEvent;

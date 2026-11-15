@@ -13,7 +13,8 @@ import { useExplorer, type Interaction } from './store';
 import { createWalker, movementInput, MOVEMENT_CODES, heldKeys } from './movement';
 import { panelTexture } from './materials';
 import { INDUSTRIAL as C } from '../visuals/palette';
-import { Bulkhead, HazardStrip } from '../visuals/IndustrialKit';
+import { BaseShell } from './BaseShell';
+import { LiftDoor } from './LiftDoor';
 import { IndustrialStructure } from '../visuals/IndustrialStructure';
 import { MachineDetail } from '../visuals/MachineDetail';
 import { ROOM_COLORS } from './BaseMap';
@@ -67,20 +68,23 @@ function Equipment({f,r}:{f:Fixture;r:Room}){
  </RigidBody>;
 }
 function SlidingDoor({d}:{d:Door}){
- const opened=useExplorer(s=>doorIsOpen(d,s.doors)),panel=useRef<THREE.Mesh>(null);
- useFrame((_,dt)=>{if(panel.current)panel.current.position.y=THREE.MathUtils.damp(panel.current.position.y,opened?4.9:FLOOR+1.5,9,dt)});
- const size:Point=d.axis==='z'?[3,3,.2]:[.2,3,3];
+ const opened=useExplorer(s=>doorIsOpen(d,s.doors));
+ const text=d.airlock?`${d.airlock.toUpperCase()} AIRLOCK · E`:`E · ${opened?'CLOSE':'OPEN'}`;
  return <Target data={{type:'door',id:d.id,label:d.airlock?`${opened?'Close':'Open'} ${d.airlock} airlock door`:`${opened?'Close':'Open'} corridor door`}}>
- <Bulkhead position={[d.x,FLOOR,d.z]} rotation={[0,d.axis==='x'?Math.PI/2:0,0]}/>
- <RigidBody type="fixed" colliders={false}>{!opened&&<CuboidCollider position={[d.x,FLOOR+1.5,d.z]} args={[size[0]/2,size[1]/2,size[2]/2]}/>}</RigidBody>
- <mesh ref={panel} visible={!opened} position={[d.x,opened?4.9:FLOOR+1.5,d.z]} castShadow><boxGeometry args={size}/><meshStandardMaterial color={d.airlock?C.burgundy:C.panel} roughness={.55} metalness={.45}/></mesh>
- <mesh position={[d.x+(d.axis==='x'?.12:0),FLOOR+1.3,d.z+(d.axis==='z'?.12:0)]} rotation={[0,d.axis==='x'?Math.PI/2:0,0]}><boxGeometry args={[.28,.45,.08]}/><meshStandardMaterial color={opened?'#9bd6b1':'#dfb270'} emissive={opened?'#588b6a':'#7d5e34'}/></mesh>
- <Label text={d.airlock?`${d.airlock.toUpperCase()} AIRLOCK`:opened?'OPEN':'E · DOOR'} p={[d.x,FLOOR+2.7,d.z+(d.axis==='z'?.14:0)]} rotation={[0,d.axis==='x'?Math.PI/2:0,0]} width={2}/>
+ <LiftDoor door={d} opened={opened}>{[-1,1].map(face=><Label key={face} text={text} p={[0,2.99,face*.3]} rotation={[0,face<0?Math.PI:0,0]} width={1.8} color={opened?'#93d9ff':'#ffd29c'}/>)}</LiftDoor>
  </Target>
 }
 function RoomLighting({r}:{r:Room}){
  const night=useCrewLife(s=>nightShift(s.seconds)),sleepingRoom=night&&r.kind==='habitat';
- return <><mesh position={[r.x*CELL,FLOOR+3.17,r.z*CELL]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[2.15,.14]}/><meshBasicMaterial color={sleepingRoom?'#6b7eaa':r.kind==='greenhouse'?'#9caed7':'#c3cae1'} side={THREE.DoubleSide}/></mesh><pointLight position={[r.x*CELL,FLOOR+2.8,r.z*CELL]} intensity={sleepingRoom?16:48} distance={(r.radius+1)*CELL*1.5} decay={2} color={sleepingRoom?'#8a9fcf':r.kind==='habitat'?'#b9c8e8':r.kind==='greenhouse'?'#93a9d5':'#c7d1f0'}/></>;
+ return <><mesh position={[r.x*CELL,FLOOR+3.17,r.z*CELL]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[2.15,.14]}/><meshBasicMaterial color={sleepingRoom?'#6b7eaa':r.kind==='greenhouse'?'#9caed7':'#c3cae1'} side={THREE.DoubleSide}/></mesh></>;
+}
+function RoomLightPool({layout:l}:{layout:Layout}){
+ const lights=useRef<(THREE.PointLight|null)[]>([]),elapsed=useRef(Infinity);
+ useFrame(({camera},dt)=>{elapsed.current+=dt;if(elapsed.current<.25)return;elapsed.current=0;
+  const nearest=[...l.rooms].sort((a,b)=>(a.x*CELL-camera.position.x)**2+(a.z*CELL-camera.position.z)**2-((b.x*CELL-camera.position.x)**2+(b.z*CELL-camera.position.z)**2)).slice(0,4),night=nightShift(useCrewLife.getState().seconds);
+  lights.current.forEach((light,i)=>{if(!light)return;const r=nearest[i];light.visible=!!r;if(!r)return;const sleeping=night&&r.kind==='habitat';light.position.set(r.x*CELL,FLOOR+2.8,r.z*CELL);light.intensity=sleeping?16:48;light.distance=(r.radius+1)*CELL*1.5;light.color.set(sleeping?'#8a9fcf':r.kind==='habitat'?'#b9c8e8':r.kind==='greenhouse'?'#93a9d5':'#c7d1f0')});
+ });
+ return <>{Array.from({length:4},(_,i)=><pointLight key={i} ref={light=>{lights.current[i]=light}} intensity={0} decay={2}/>)}</>;
 }
 export function Base({layout:l}:{layout:Layout}){
  const relayOnline=useGame(s=>s.flags.includes('eva-relay-repaired')),pressure=useExplorer(s=>s.pressure);
@@ -89,18 +93,8 @@ export function Base({layout:l}:{layout:Layout}){
  const floorMap=useMemo(()=>panelTexture(true),[]),wallMap=useMemo(()=>panelTexture(false),[]);
  useEffect(()=>()=>{floorMap.dispose();wallMap.dispose()},[floorMap,wallMap]);
  return <>
- <IndustrialStructure layout={l}/><CorridorLighting layout={l}/>
- {[...l.cells].map(k=>{const [ix,iz]=k.split(',').map(Number),x=ix*CELL,z=iz*CELL;return <group key={k}>
- <Solid p={[x,FLOOR-.18,z]} size={[3,.36,3]} color="#c4c7d3" texture={floorMap}/>
- <Solid p={[x,FLOOR+3.3,z]} size={[3,.2,3]} color={C.dark}/>
- {[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>{if(l.cells.has(cellKey(ix+dx,iz+dz)))return null;const outer=Math.abs(x-l.airlock.x)<.1&&Math.abs(z+dz*1.5-l.airlock.outerZ)<.1;if(outer)return null;return <group key={`${dx}-${dz}`}>
- <Solid p={[x+dx*1.5,FLOOR+1.6,z+dz*1.5]} size={dx?[.22,3.2,3]:[3,3.2,.22]} color="#d0d3df" texture={wallMap}/>
- <mesh position={[x+dx*1.37,FLOOR+1.6,z+dz*1.37]} rotation={[0,dx?Math.PI/2:0,0]}><planeGeometry args={[1.8,.75]}/><meshStandardMaterial color="#171f36" metalness={.65} roughness={.15}/></mesh>
- <Solid p={[x+dx*1.38,FLOOR+.35,z+dz*1.38]} size={dx?[.06,.12,3]:[3,.12,.06]} color={C.burgundy}/>
- <mesh position={[x+dx*1.36,FLOOR+2.9,z+dz*1.36]}><boxGeometry args={dx?[.06,.07,2.5]:[2.5,.07,.06]}/><meshBasicMaterial color="#7981a0"/></mesh>
- {[-1,1].map(side=><mesh key={side} position={[x+dx*1.36+(dx?0:side*1.4),FLOOR+1.65,z+dz*1.36+(dz?0:side*1.4)]} castShadow><boxGeometry args={dx?[.12,3,.12]:[.12,3,.12]}/><meshStandardMaterial color={C.burgundy} metalness={.65} roughness={.45}/></mesh>)}
- </group>})}
- </group>})}
+ <IndustrialStructure layout={l}/><RoomLightPool layout={l}/><CorridorLighting layout={l}/>
+ <BaseShell layout={l} floorMap={floorMap} wallMap={wallMap}/>
  {fixtures.map(f=><Equipment key={f.id} f={f} r={l.rooms.find(r=>r.id===f.roomId)!}/>)}
  {l.rooms.map(r=><group key={r.id}>
  <RoomLighting r={r}/>
@@ -115,10 +109,10 @@ export function Base({layout:l}:{layout:Layout}){
 }
 export function Astronaut({layout:l}:{layout:Layout}){
  const {camera,scene}=useThree(),{world}=useRapier(),body=useRef<RapierRigidBody>(null),collider=useRef<RapierCollider>(null);
- const vertical=useRef(0),speed=useRef(new THREE.Vector3()),elapsed=useRef(0),sample=useRef(0),motion=useRef({moving:false,sprinting:false});
+ const vertical=useRef(0),speed=useRef(new THREE.Vector3()),elapsed=useRef(0),sample=useRef(0),lifeSample=useRef(0),targetSample=useRef(0),motion=useRef({moving:false,sprinting:false});
  const expanded=useGame(s=>s.expandedPlots),plots=useMemo(()=>ownedPlots(expanded),[expanded]),relocation=useExplorer(s=>s.relocation);
  const controller=useRef<ReturnType<ReturnType<typeof useRapier>['world']['createCharacterController']>|null>(null);
- const ray=useMemo(()=>new THREE.Raycaster(),[]),forward=useMemo(()=>new THREE.Vector3(),[]),supportCache=useRef<{state:unknown;safe:boolean}>({state:null,safe:true});
+ const aim=useMemo(()=>new THREE.Vector2(),[]),ray=useMemo(()=>new THREE.Raycaster(),[]),forward=useMemo(()=>new THREE.Vector3(),[]),supportCache=useRef<{state:unknown;safe:boolean}>({state:null,safe:true});
  useEffect(()=>{const c=createWalker(world);controller.current=c;return()=>{controller.current=null;world.removeCharacterController(c)}},[world]);
  useEffect(()=>{
   const s=useExplorer.getState(),start=s.locationSaved?s.position:l.spawn;
@@ -171,15 +165,19 @@ export function Astronaut({layout:l}:{layout:Layout}){
    }
    if(p.y<meshGroundHeight(l,p.x,p.z,plots)-25){p={x:p.x,y:meshGroundHeight(l,p.x,p.z,plots)+1,z:p.z};body.current.setTranslation(p,true);body.current.setNextKinematicTranslation(p);vertical.current=0;}
    pos=[p.x,p.y,p.z];camera.position.set(p.x,p.y+.7,p.z);sample.current+=delta;
-   if(sample.current>.15){camera.getWorldDirection(forward);useExplorer.setState({position:pos,heading:Math.atan2(forward.x,-forward.z),locationSaved:true,visited:[...new Set([...s.visited,...nearbyLandmarks(p.x,p.z).map(site=>site.id)])]});sample.current=0;}
+   if(sample.current>.15){
+    camera.getWorldDirection(forward);const heading=Math.atan2(forward.x,-forward.z),moved=Math.hypot(pos[0]-s.position[0],pos[1]-s.position[1],pos[2]-s.position[2])>.01;
+    if(moved||Math.abs(heading-s.heading)>.01){const added=moved?nearbyLandmarks(p.x,p.z).map(site=>site.id).filter(id=>!s.visited.includes(id)):[];useExplorer.setState({position:moved?pos:s.position,heading,locationSaved:true,...(added.length?{visited:[...s.visited,...added]}:{})})}sample.current=0;
+   }
   }
   if(!s.locked||s.panel||useTrainingUI.getState().open)return;
   if(supportCache.current.state!==g)supportCache.current={state:g,safe:!commissioningComplete(g)||calculateSupport(g)};
   const safe=driving||(inAirlock(l,pos)?s.pressure>.99:l.cells.has(cellAt(pos))&&supportCache.current.safe),dt=Math.min(.1,delta);
-  s.tick(dt,!safe,motion.current.sprinting);elapsed.current+=dt;
+  lifeSample.current+=dt;if(lifeSample.current>=.1){s.tick(.1,!safe,motion.current.sprinting);lifeSample.current-=.1}elapsed.current+=dt;
   if(elapsed.current>=1){g.evaTick(s.playerId,elapsed.current,safe,s.suited,s.oxygen,motion.current.moving,motion.current.sprinting);elapsed.current=0;}
   if(driving)return;
-  ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=3.4;let target:Interaction|null=null;
+  targetSample.current+=dt;if(targetSample.current<.08)return;targetSample.current%=.08;
+  ray.setFromCamera(aim,camera);ray.far=3.4;let target:Interaction|null=null;
   for(const hit of ray.intersectObjects(scene.children,true)){
    if(!(hit.object instanceof THREE.Mesh)||!hit.object.visible)continue;
    let obj:THREE.Object3D|null=hit.object;while(obj){if(obj.userData.interaction){target=obj.userData.interaction;break}obj=obj.parent}break;

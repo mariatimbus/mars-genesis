@@ -12,7 +12,7 @@ import { travelToSurfaceSol } from './travel';
 import './weather.css';
 
 function WeatherIcon({dust,cloud}:{dust:number;cloud:number}){return dust>.4?<Wind size={17}/>:cloud>.35?<Cloud size={17}/>:<Sun size={17}/>}
-export function WeatherHUD({onSkip}:{onSkip?:()=>void}){
+export function WeatherHUD({onSkip,compact=false}:{onSkip?:()=>void;compact?:boolean}){
  const sol=useSurfaceWeather(s=>s.sol),w=surfaceWeather(sol);
  const blocked=useSurfaceWeather(s=>s.blocked);
  useEffect(()=>{
@@ -30,11 +30,9 @@ export function WeatherHUD({onSkip}:{onSkip?:()=>void}){
   };
   window.addEventListener('keydown',key);return()=>{window.removeEventListener('keydown',key);clearTimeout(timer);clearToast()};
  },[onSkip]);
- return <div className={`surface-weather-hud ${w.dust>.6?'is-dusty':''}`} aria-label={`Surface weather sol ${sol}`}>
-  <span><WeatherIcon {...w}/> SURFACE SOL {String(sol).padStart(3,'0')} / 720</span><strong>{w.title}</strong>
-  <small>{w.wind>.6?'Strong gusts':w.wind>.4?'Windblown dust':'Light drifting dust'} · {w.cloud>.6?'Ice-cloud veil':w.dust>.6?'Low visibility':'Open horizon'}</small>
-  <em>Visual reconstruction · N → next event</em>
-  {blocked&&<small className="surface-maintenance-label">🔒 Systems on hold · Esc → Restore this step</small>}
+ return <div className={`surface-weather-hud ${compact?'is-compact':''} ${w.dust>.6?'is-dusty':''}`} aria-label={`Surface weather sol ${sol}`} title={`${w.wind>.6?'Strong gusts':'Drifting wind'} · ${w.dust>.6?'Low visibility':'Open horizon'}`}>
+  <span><WeatherIcon {...w}/> {compact?'WEATHER':`SURFACE SOL ${String(sol).padStart(3,'0')} / 720`}</span><strong>{w.title}</strong>
+  {!compact&&<><small>{w.wind>.6?'Strong gusts':w.wind>.4?'Windblown dust':'Light drifting dust'} · {w.cloud>.6?'Ice-cloud veil':w.dust>.6?'Low visibility':'Open horizon'}</small><em>Visual reconstruction · N → next event</em>{blocked&&<small className="surface-maintenance-label">🔒 Systems on hold · Esc → Restore this step</small>}</>}
  </div>;
 }
 export function WeatherSkipControls({onSkip}:{onSkip?:()=>void}){

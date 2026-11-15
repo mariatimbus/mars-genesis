@@ -130,7 +130,8 @@ export function MarsExterior({layout:l,preview=false}:{layout:Layout;preview?:bo
  const dustCovered=useGame(s=>activeSurfaceIncidents(s).some(e=>e.task==='dust')),solarOnline=useGame(s=>!roomSuspended(s,'solar'));
  const buildings=useGame(s=>s.buildings),expanded=useGame(s=>s.expandedPlots),plots=useMemo(()=>ownedPlots(expanded),[expanded]);
  const plan=useMemo(()=>exteriorPlan(l,buildings),[l,buildings]),texture=useMemo(()=>regolithTexture(),[]);
- const position=useExplorer(s=>s.position),cx=Math.floor((preview?0:position[0])/CHUNK_SIZE),cz=Math.floor((preview?0:position[2])/CHUNK_SIZE);
+ const position=useExplorer.getState().position;
+ const cx=useExplorer(s=>Math.floor((preview?0:s.position[0])/CHUNK_SIZE)),cz=useExplorer(s=>Math.floor((preview?0:s.position[2])/CHUNK_SIZE));
  const extraRocks=useMemo(()=>{
   const rocks:Rock[]=[];
   for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){

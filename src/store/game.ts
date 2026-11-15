@@ -10,7 +10,7 @@ import { catalog, validPlacement, type Kind } from '../simulation/engine';
 import { createScenario, nextSol, canWork } from '../simulation/survival';
 import { applyDecision, optionBlocked, decisionOptions } from '../simulation/events';
 import type { Assignment, Difficulty, SurvivalState } from '../simulation/types';
-import { enterSurfaceSol,repairSurfaceIncident } from '../weather/incidentActions';
+import { enterSurfaceSol,repairSurfaceIncident,acknowledgeSurfaceIncident } from '../weather/incidentActions';
 import { advanceChallengeClock } from '../training/attempts';
 import type { SurfaceIncidentId } from '../weather/incidents';
 import { useSurfaceWeather } from '../weather/store';
@@ -18,7 +18,7 @@ import { DEFAULT_SURFACE_SECONDS } from '../weather/timeOfDay';
 type Game = SurvivalState & {
  startFieldMission:()=>void; fieldRepair:(id:string)=>boolean; evaTick:(id:string,dt:number,safe:boolean,suited:boolean,oxygen:number,moving:boolean,sprint:boolean)=>void; fieldUse:(id:string,playerId:string)=>void; refillSuit:(amount:number)=>boolean; pressurize:()=>boolean;
  trainingAction:(id:TaskId,action:TaskAction)=>void; restartTraining:(id:TaskId)=>void;
- challengeTick:(dt:number)=>void;enterSurfaceSol:(sol:number,replayScenario?:boolean)=>void;surfaceRepairAction:(id:SurfaceIncidentId,action:TaskAction)=>void;
+ challengeTick:(dt:number)=>void;enterSurfaceSol:(sol:number,replayScenario?:boolean)=>void;acknowledgeIncident:(id:SurfaceIncidentId,later?:boolean)=>void;surfaceRepairAction:(id:SurfaceIncidentId,action:TaskAction,target?:TaskId)=>void;
  prologueSeen:boolean; completePrologue:()=>void; replayPrologue:()=>void;
  selected:string|null; placing:Kind|null; expanding:boolean; selectedPlot:string|null;
  startExpansion:()=>void; chooseExpansion:(id:string)=>void; confirmExpansion:()=>void;
@@ -39,7 +39,8 @@ export const useGame=create<Game>()(persist((set,get)=>({...createScenario(),pro
  restartTraining:id=>set(s=>restartTrainingTask(simulationSnapshot(s),id)),
  challengeTick:dt=>set(s=>advanceChallengeClock(s,dt)),
  enterSurfaceSol:(sol,replayScenario)=>set(s=>{const n=enterSurfaceSol(s,sol,replayScenario);return n===s?s:n}),
- surfaceRepairAction:(id,action)=>set(s=>{const n=repairSurfaceIncident(s,id,action);return n===s?s:n}),
+ acknowledgeIncident:(id,later)=>set(s=>acknowledgeSurfaceIncident(s,id,later)),
+ surfaceRepairAction:(id,action,target)=>set(s=>{const n=repairSurfaceIncident(s,id,action,target);return n===s?s:n}),
  completePrologue:()=>set({prologueSeen:true}),
  replayPrologue:()=>set({prologueSeen:false,placing:null,expanding:false,selectedPlot:null}),
  select:id=>set({selected:id,placing:null,expanding:false,selectedPlot:null}),

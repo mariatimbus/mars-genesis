@@ -5,10 +5,11 @@ function setup(){
  const doc=Object.assign(new EventTarget(),{pointerLockElement:null as unknown,defaultView:new EventTarget(),exitPointerLock:vi.fn()}),camera=new PerspectiveCamera(),onCapture=vi.fn(),onError=vi.fn();let allowed=true;
  const canvas={ownerDocument:doc,requestPointerLock:vi.fn(()=>{doc.pointerLockElement=canvas;doc.dispatchEvent(new Event('pointerlockchange'));return Promise.resolve()})};
  doc.exitPointerLock.mockImplementation(()=>{doc.pointerLockElement=null;doc.dispatchEvent(new Event('pointerlockchange'))});
- const mount=()=>bindMouseLook(camera,canvas as unknown as HTMLCanvasElement,{canCapture:()=>allowed,onCapture,onError});
+ const onEscape=vi.fn();
+ const mount=()=>bindMouseLook(camera,canvas as unknown as HTMLCanvasElement,{canCapture:()=>allowed,onCapture,onError,onEscape});
  const click=(disabled=false)=>{const event=new Event('click');Object.defineProperties(event,{target:{value:{closest:()=>({disabled})}},button:{value:0}});doc.dispatchEvent(event)};
  const move=(x:number,y:number)=>{const event=new Event('mousemove');Object.defineProperties(event,{movementX:{value:x},movementY:{value:y}});doc.dispatchEvent(event)};
- return {doc,camera,canvas,onCapture,onError,mount,click,move,block:()=>{allowed=false}};
+ return {doc,camera,canvas,onCapture,onError,onEscape,mount,click,move,block:()=>{allowed=false}};
 }
 describe('mouse capture across menus and remounts',()=>{
  it('only rotates the view after the browser confirms capture',()=>{
@@ -33,4 +34,12 @@ describe('mouse capture across menus and remounts',()=>{
  it('clamps vertical look and removes document handlers on unmount',()=>{
   const s=setup(),cleanup=s.mount();s.click();s.move(0,10000);expect(s.camera.rotation.x).toBeGreaterThan(-Math.PI/2);const q=s.camera.quaternion.clone();cleanup();s.click();s.move(50,20);expect(s.camera.quaternion.equals(q)).toBe(true);expect(s.canvas.requestPointerLock).toHaveBeenCalledTimes(1);
  });
+});
+
+it('leaves the first captured Escape to the browser and closes only an already open menu',()=>{
+ const s=setup(),cleanup=s.mount();s.click();
+ const escape=()=>{const e=new Event('keydown',{cancelable:true});Object.defineProperties(e,{key:{value:'Escape'},repeat:{value:false}});s.doc.dispatchEvent(e)};
+ escape();expect(s.onEscape).not.toHaveBeenCalled();s.doc.exitPointerLock();escape();
+ expect(s.onEscape).toHaveBeenCalledOnce();expect(s.canvas.requestPointerLock).toHaveBeenCalledTimes(1);
+ cleanup();escape();expect(s.onEscape).toHaveBeenCalledOnce();
 });

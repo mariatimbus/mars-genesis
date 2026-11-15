@@ -1,0 +1,104 @@
+/* The play HUD uses flowing columns. Long objectives and weather names grow
+   their own rows instead of colliding with a fixed-position habitat clock. */
+.fps-hud{--hud-edge:#a6bab72b;--hud-surface:#0c1622d9;--hud-muted:#99abb4;--hud-ink:#e3ece8}
+.fps-hud .hud-left-column{position:absolute;top:24px;left:24px;width:290px;display:flex;flex-direction:column;gap:12px;max-height:calc(100dvh - 150px);overflow:auto;scrollbar-width:none}
+.fps-hud .hud-left-column .fps-top{position:static;inset:auto;text-shadow:0 1px 6px #0008}
+.fps-hud .fps-top .fps-eyebrow{font-size:8px;letter-spacing:2.3px;color:#b5c9bf}
+.fps-hud .fps-top strong{font-size:13px;letter-spacing:1.1px;line-height:1.5;font-weight:600;margin-top:5px}
+.fps-hud .hud-status-strip{display:flex;flex-direction:column;gap:10px;padding:12px 14px;background:var(--hud-surface);border:1px solid var(--hud-edge);border-radius:6px;backdrop-filter:blur(8px)}
+.fps-hud .crew-clock.is-compact{position:static;inset:auto;display:flex;align-items:center;gap:8px;max-width:none;padding:0;border:0;background:none;pointer-events:none}
+.fps-hud .crew-clock.is-compact>span{display:flex;gap:6px;font-size:8px;letter-spacing:.8px;color:var(--hud-muted)}
+.fps-hud .crew-clock.is-compact strong{margin-left:auto;font-size:14px;font-weight:500;line-height:1.4;color:var(--hud-ink);font-variant-numeric:tabular-nums}
+.fps-hud .crew-clock.is-compact small{font-size:9px;line-height:1.4;color:var(--hud-muted);white-space:nowrap}
+.fps-hud .surface-weather-hud.is-compact{position:static;inset:auto;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:6px 12px;max-width:none;padding:9px 0 0;border:0;border-top:1px solid var(--hud-edge);background:none;text-shadow:none}
+.fps-hud .surface-weather-hud.is-compact>span{font-size:8px;letter-spacing:.6px;gap:6px;line-height:1.5}
+.fps-hud .surface-weather-hud.is-compact>span svg{width:13px;height:13px}
+.fps-hud .surface-weather-hud.is-compact strong{font-size:10px;font-weight:400;line-height:1.5;margin:0;text-align:right;color:#c2cfcc;overflow-wrap:anywhere}
+.fps-hud .surface-weather-hud.is-compact.is-dusty strong{color:#e0ba90}
+.fps-hud .hud-left-column .fps-objective{position:static;inset:auto;max-width:none;padding:12px 14px;border:1px solid var(--hud-edge);border-left:2px solid #90c8b3;border-radius:4px;background:var(--hud-surface);text-shadow:none;line-height:1.6}
+.fps-hud .fps-objective .fps-eyebrow{font-size:8px;color:var(--hud-muted);letter-spacing:1.2px;margin-bottom:6px}
+.fps-hud .fps-objective>strong{display:block;color:var(--hud-ink);font-size:12px;font-weight:500;overflow-wrap:anywhere}
+.fps-hud .hud-right-column{position:absolute;top:24px;right:24px;width:246px;display:flex;flex-direction:column;gap:12px;max-height:calc(100dvh - 180px);overflow:auto;scrollbar-width:none;pointer-events:none}
+.fps-hud .hud-right-column>.tactical-map{position:relative;inset:auto;width:100%;flex:none;filter:drop-shadow(0 2px 4px #02090bb0)}
+.fps-hud .tactical-map footer{padding-top:0;gap:3px}
+.fps-hud .tactical-map:not(.base-map-expanded) footer>strong{display:none}
+.fps-hud .tactical-map:not(.base-map-expanded) footer>span{font-size:7px}
+.fps-hud .tactical-map:not(.base-map-expanded) .map-maintenance-key{display:none}
+.fps-hud .tactical-map:not(.base-map-expanded) .map-maintenance-key small{display:none}
+.fps-hud .hud-right-column>.base-map-expanded{position:fixed;top:20px;right:20px;width:min(640px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow:auto;filter:none;visibility:visible}
+.hud-right-column:has(.base-map-expanded)>.base-emergency{display:none}
+.fps-hud .base-emergency.is-inline{position:static;inset:auto;z-index:auto;flex:none}
+.fps-hud .base-emergency.is-inline .base-emergency-frame{display:none}
+.fps-hud .base-emergency.is-inline .base-emergency-banner{position:static;inset:auto;transform:none;width:100%;display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;gap:9px;padding:12px;border-width:1px;border-left-width:3px;border-radius:4px;box-shadow:none;background:#311b1fe8}
+.fps-hud .base-emergency.is-inline.is-warning .base-emergency-banner{background:#30251ae8}
+.fps-hud .base-emergency.is-inline .base-emergency-icon{width:18px;height:18px;margin-top:1px}
+.fps-hud .base-emergency.is-inline .base-emergency-copy>strong{font-size:8px;letter-spacing:.8px;line-height:1.6}
+.fps-hud .base-emergency.is-inline .base-emergency-copy p{font-size:11px;line-height:1.55;margin:5px 0;font-weight:500}
+.fps-hud .base-emergency.is-inline .base-emergency-copy small{font-size:9px;line-height:1.5}
+.fps-hud .base-emergency.is-inline .base-emergency-banner>button{grid-column:1/-1;justify-content:center;min-height:38px;padding:8px;font-size:9px;background:#ffffff09;box-shadow:none;letter-spacing:.6px}
+.fps-hud .fps-vitals{left:24px;bottom:28px;gap:20px;padding:10px 14px;background:var(--hud-surface);border:1px solid var(--hud-edge);border-radius:5px;box-shadow:none;backdrop-filter:blur(8px)}
+.fps-hud .fps-vitals>span{gap:5px 7px}
+.fps-hud .fps-vitals strong{font-size:13px;font-weight:500;color:var(--hud-ink);text-shadow:none}
+.fps-hud .fps-vitals svg{width:14px;height:14px;color:#a9c6b8}
+.fps-hud .fps-vitals small{font-size:6px;letter-spacing:.9px;color:var(--hud-muted)}
+.fps-hud .fps-vitals .warning strong,.fps-hud .fps-vitals .warning svg{color:#ffb084}
+.fps-hud .hud-context-column{position:absolute;right:24px;bottom:28px;width:246px;display:flex;flex-direction:column;align-items:stretch;gap:10px;pointer-events:none}
+.fps-hud .hud-context-column .fps-notice{position:static;inset:auto;transform:none;max-width:none;width:auto;padding:9px 11px;font-size:10px;line-height:1.6;overflow-wrap:anywhere;box-shadow:none;border-width:1px}
+.fps-hud .hud-context-column .fps-prompt{position:static;inset:auto;transform:none;max-width:none;display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid #b3c5ae65;border-radius:4px;background:#0c1721e8;box-shadow:none;font-size:11px;line-height:1.5;color:var(--hud-ink);white-space:normal}
+.fps-hud .fps-prompt kbd{display:grid;place-items:center;min-width:24px;min-height:24px;border:1px solid #a9c7b4;background:#a9c7b420;color:#d9f2db;border-radius:3px;font-size:10px;box-shadow:none}
+.fps-hud .hud-context-column .rover-dashboard{position:static;inset:auto;width:auto;padding:12px 14px;background:var(--hud-surface);border:1px solid var(--hud-edge);border-radius:5px;box-shadow:none}
+.fps-hud .rover-dashboard .fps-eyebrow{font-size:8px;letter-spacing:1px;padding-bottom:8px}
+.fps-hud .rover-dashboard>div{gap:18px;margin:10px 0 0;justify-content:space-between}
+.fps-hud .rover-dashboard strong{font-size:25px;text-shadow:none}
+.fps-hud .rover-dashboard>div>span{font-size:15px;text-shadow:none}
+.fps-hud .rover-dashboard small{font-size:6px;letter-spacing:.7px;margin-top:5px}
+.fps-hud .fps-movement-help{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:max-content;max-width:90vw;padding:0;background:none;border:0;color:#a6b1b4b3;font-size:8px;letter-spacing:.3px;line-height:1.5;text-align:center}
+.fps-hud .fps-movement-help kbd{font:inherit;color:#d0dad5c9}
+.fps-hud .fps-movement-help span{margin:0 7px;color:#9ba8a580}
+.fps-hud .fps-model-label{left:24px;bottom:9px;font-size:6px;letter-spacing:.5px;color:#9eaeb9}
+.fps-hud .fps-alarm,.fps-hud.has-base-alert .fps-alarm{top:auto;bottom:115px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 48px);box-sizing:border-box;padding:10px 14px;font-size:11px;line-height:1.5;z-index:5}
+.fps-hud .fps-notice{left:50%;bottom:164px;transform:translateX(-50%);max-width:450px;width:max-content;padding:9px 14px;font-size:10px;line-height:1.5;border-width:1px;background:#10212ae6}
+.fps-hud.is-paused .hud-left-column,.fps-hud.is-paused>.fps-vitals,.fps-hud.is-paused>.fps-movement-help,.fps-hud.is-paused>.fps-model-label,.fps-hud.is-paused>.fps-notice,.fps-hud.is-paused .base-emergency.is-inline{visibility:hidden}
+.fps-hud.is-panel-open .hud-right-column,.fps-hud.is-panel-open .hud-right-column>.base-map-expanded{visibility:hidden}
+.fps-hud .fps-pause{background:#030a123d;backdrop-filter:blur(1px)}
+.fps-hud .fps-pause>div{width:420px;max-width:calc(100vw - 36px);max-height:calc(100dvh - 40px);padding:22px 24px;background:#101925f5;border:1px solid #91aaa252;border-radius:9px;box-shadow:0 16px 70px #0007;scrollbar-width:thin;scrollbar-color:#536b6b #111a25}
+.fps-hud .pause-heading{margin-bottom:14px}
+.fps-hud .pause-heading>.fps-eyebrow{font-size:8px;letter-spacing:2px;color:#9ebcab}
+.fps-hud .pause-heading h1{font-size:27px;font-weight:500;letter-spacing:1px;margin:9px 0 15px}
+.fps-hud .pause-heading .crew-clock{padding:9px 0;border-top:1px solid var(--hud-edge);border-bottom:1px solid var(--hud-edge)}
+.fps-hud .fps-pause .pause-controls{font-size:9px;line-height:1.8;color:#9eafb6;margin:0 0 13px}
+.fps-hud .fps-pause button{border-width:1px;border-radius:4px;box-shadow:none;letter-spacing:.6px;min-height:44px;font-size:10px;padding:10px 12px;margin-top:9px}
+.fps-hud .fps-pause #enter-astronaut{background:#27463b;border-color:#88b69b;color:#e2efdf}
+.fps-hud .fps-pause #deploy-rover{background:#17252d;border-color:#6e918d;color:#bdcfc7}
+.fps-hud .pause-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:3px 0 14px}
+.fps-hud .fps-pause .surface-incident-notice{border-width:1px;border-left-width:3px;border-radius:4px;padding:12px;background:#31251cd9}
+.fps-hud .fps-pause .surface-incident-notice>strong{font-size:9px;line-height:1.7;letter-spacing:.6px}
+.fps-hud .fps-pause .surface-incident-notice>p{display:none}
+.fps-hud .fps-pause .surface-incident-notice>div{padding:9px 0 0;border:0}
+.fps-hud .fps-pause .surface-incident-notice button{min-height:40px;font-size:9px}
+.fps-hud .fps-pause .weather-skip-controls small{font-size:8px!important;line-height:1.7;margin-bottom:10px}
+.fps-hud .pause-options{padding:12px 0;border-top:1px solid var(--hud-edge);text-align:left;font-size:10px;color:#b0c1bd}
+.fps-hud .pause-options summary{cursor:pointer;line-height:1.8;list-style-position:inside}
+.fps-hud .pause-options summary:focus-visible{outline:2px solid #c9dfa4;outline-offset:4px;border-radius:2px}
+.fps-hud .pause-options .crew-time-controls{border:0;background:#08121b80;border-radius:4px;margin:10px 0;padding:10px}
+@media(max-width:1000px){.fps-hud.is-paused .hud-right-column{visibility:hidden}.fps-hud .hud-left-column{width:250px}.fps-hud .hud-right-column,.fps-hud .hud-context-column{width:215px}}
+@media(max-width:760px){
+ .fps-hud .hud-left-column{top:14px;left:12px;width:calc(100vw - 190px);gap:8px;max-height:calc(100dvh - 140px)}
+ .fps-hud .fps-top .fps-eyebrow{font-size:7px;letter-spacing:1.5px}.fps-hud .fps-top strong{font-size:10px;letter-spacing:.5px;margin-top:3px}
+ .fps-hud .hud-status-strip{padding:9px 10px;gap:8px}.fps-hud .crew-clock.is-compact{gap:6px;flex-wrap:wrap}
+ .fps-hud .crew-clock.is-compact>span{font-size:7px;letter-spacing:.3px}.fps-hud .crew-clock.is-compact>span svg{width:12px;height:12px}.fps-hud .crew-clock.is-compact strong{font-size:12px}.fps-hud .crew-clock.is-compact small{font-size:8px}
+ .fps-hud .surface-weather-hud.is-compact{grid-template-columns:1fr;gap:5px;padding-top:7px}.fps-hud .surface-weather-hud.is-compact>span{font-size:7px}.fps-hud .surface-weather-hud.is-compact strong{text-align:left;font-size:9px}
+ .fps-hud .hud-left-column .fps-objective{padding:9px 10px}.fps-hud .fps-objective .fps-eyebrow{font-size:7px;margin-bottom:4px}.fps-hud .fps-objective>strong{font-size:10px;line-height:1.6}
+ .fps-hud .hud-right-column{top:14px;right:12px;width:154px;gap:8px;max-height:calc(100dvh - 230px)}
+ .fps-hud .tactical-map header{padding:0 0 4px}.fps-hud .tactical-map header>span{font-size:6px;letter-spacing:.6px}.fps-hud .tactical-map .base-map-controls button{min-width:40px;min-height:40px;padding:6px}.fps-hud .tactical-map footer>span{font-size:5px!important}
+ .fps-hud .tactical-map:not(.base-map-expanded) .map-maintenance-key{font-size:7px;padding:4px;gap:4px}.fps-hud .tactical-map:not(.base-map-expanded) .map-maintenance-key svg{width:10px;height:10px}
+ .fps-hud .base-emergency.is-inline .base-emergency-banner{padding:9px;gap:6px;grid-template-columns:13px minmax(0,1fr)}
+ .fps-hud .base-emergency.is-inline .base-emergency-icon{width:13px;height:13px}.fps-hud .base-emergency.is-inline .base-emergency-copy>strong{font-size:7px;letter-spacing:.2px}.fps-hud .base-emergency.is-inline .base-emergency-copy p{font-size:9px;line-height:1.5}.fps-hud .base-emergency.is-inline .base-emergency-copy small{font-size:8px}.fps-hud .base-emergency.is-inline .base-emergency-banner>button{font-size:8px;min-height:36px;padding:7px}
+ .fps-hud .fps-vitals{left:12px;bottom:28px;gap:14px;padding:9px 11px}.fps-hud .fps-vitals strong{font-size:12px}.fps-hud .fps-vitals small{font-size:6px}.fps-hud .fps-vitals svg{width:12px;height:12px}
+ .fps-hud .hud-context-column{right:12px;bottom:96px;width:176px;gap:7px}.fps-hud .hud-context-column .fps-prompt{padding:8px 9px;font-size:10px}.fps-hud .hud-context-column .rover-dashboard{padding:10px}.fps-hud .rover-dashboard strong{font-size:22px}.fps-hud .rover-dashboard>div>span{font-size:12px}.fps-hud .rover-dashboard>div{gap:10px}
+ .fps-hud .fps-movement-help{font-size:7px;bottom:8px}.fps-hud .fps-model-label{display:none}
+ .fps-hud .fps-alarm,.fps-hud.has-base-alert .fps-alarm{bottom:112px;max-width:calc(100vw - 24px);font-size:10px}.fps-hud .fps-notice{bottom:165px;max-width:calc(100vw - 24px);font-size:9px}
+ .fps-hud .fps-pause>div{padding:18px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}.fps-hud .pause-heading h1{font-size:24px}.fps-hud .pause-heading .crew-clock{flex-wrap:nowrap}.fps-hud .fps-pause button{min-height:44px;font-size:9px}
+ .fps-hud .hud-right-column>.base-map-expanded{top:12px;right:12px;width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:12px}
+}
+@media(max-height:600px){.fps-hud .hud-left-column{gap:7px;top:12px}.fps-hud .hud-right-column{top:12px}.fps-hud .tactical-map:not(.base-map-expanded) .base-map-plot>svg{max-height:125px}.fps-hud .tactical-map:not(.base-map-expanded) footer{display:none}.fps-hud .hud-status-strip,.fps-hud .hud-left-column .fps-objective{padding:9px 11px}.fps-hud .pause-heading h1{font-size:21px;margin:7px 0 10px}}
