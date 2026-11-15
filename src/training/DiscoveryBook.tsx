@@ -4,6 +4,9 @@ import { Plant, ToolIcon } from './art';
 import { references, roomGuides, roomNames, tasks, type TaskId } from './catalog';
 import { discoveries } from './discoveries';
 import { useTrainingUI } from './ui';
+import { failedLessonRoots } from './attempts';
+import { blockingSurfaceIncidents,taskDependsOn } from '../weather/incidents';
+import { SurfaceIncidentNotice } from '../weather/IncidentPanel';
 
 const Stars = ({ stars }: { stars: number }) => <span className="training-stars" aria-label={`${stars} of 3 stars`}>{'★'.repeat(stars)}<span>{'☆'.repeat(3 - stars)}</span></span>;
 
@@ -37,14 +40,14 @@ export function DiscoveryArt({ id }: { id: TaskId }) {
 
 /** Every challenge in one list: room, stars, status. */
 export function AllChallenges() {
-  const records = useGame(s => s.commissioning.training.records), ui = useTrainingUI();
+  const g=useGame(), records=g.commissioning.training.records, ui = useTrainingUI();
   return <section className="discovery-book"><div className="discovery-heading"><span className="training-kicker">MISSION LOG</span><h2>All challenges</h2><p>Every experiment in the colony, its room and your best stars.</p></div>
-    <div className="challenge-list">{tasks.map((task, i) => { const r = records[task.id]; return <article key={task.id} className={r ? 'challenge-row done' : 'challenge-row'}>
+    <div className="training-maintenance-summary"><SurfaceIncidentNotice/></div><div className="challenge-list">{tasks.map((task, i) => { const r = records[task.id],incident=blockingSurfaceIncidents(g,task.id)[0],failure=failedLessonRoots(g).find(root=>taskDependsOn(task.id,root)); return <article key={task.id} className={incident||failure?'challenge-row is-suspended':r?'challenge-row done':'challenge-row'}>
       <span className="challenge-num">{String(i + 1).padStart(2, '0')}</span>
       <span className="challenge-room">{roomGuides[task.room].icon} {roomNames[task.room]}</span>
       <strong>{task.title}</strong>
-      {r ? <Stars stars={r.stars} /> : <span className="challenge-open"><LockKeyhole size={13} /> not done</span>}
-      {!ui.scoped && <button onClick={() => ui.choose(task.room)}>Go <ChevronRight size={14} /></button>}
+      {failure?<span className="challenge-open"><LockKeyhole size={13}/>{failure===task.id?'attempt failed':'dependency paused'}</span>:incident?<span className="challenge-open" title={incident.title}><LockKeyhole size={13}/> {incident.task===task.id?'repair required':'dependency paused'}</span>:r ? <Stars stars={r.stars} /> : <span className="challenge-open"><LockKeyhole size={13} /> not done</span>}
+      {!ui.scoped && <button onClick={() => incident?ui.repair(incident.task):failure?ui.repair(failure):ui.choose(task.room)}>{incident||failure?'Repair':'Go'} <ChevronRight size={14} /></button>}
     </article>; })}</div></section>;
 }
 

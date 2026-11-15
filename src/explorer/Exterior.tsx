@@ -1,12 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { RigidBody, CuboidCollider, ConvexHullCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useGame } from '../store/game';
 import { ownedPlots, type LandPlot } from '../game/worldConfig';
 import { BuildingModel } from '../game/Buildings';
 import { useExplorer } from './store';
-import { CELL, FLOOR, cellAt, type Layout, type Point } from './layout';
+import { CELL, FLOOR, type Layout, type Point } from './layout';
 import { terrainHeight, meshGroundHeight } from './fixtures';
 import { airlockRamp, exteriorPlan, routeSamples, type Site, type Route, type Rock } from './exteriorPlan';
 import { seededRandom } from './terrain';
@@ -16,8 +15,8 @@ import { LANDMARKS, CHUNK_SIZE, surfaceDistance } from './planet';
 import { exteriorClear, overlaps } from './fixtures';
 import { INDUSTRIAL as C } from '../visuals/palette';
 import { HazardStrip, Pipe } from '../visuals/IndustrialKit';
+import { activeSurfaceIncidents,roomSuspended } from '../weather/incidents';
 
-const noRaycast=()=>null;
 function regolithTexture(){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;
  const ctx=canvas.getContext('2d')!,pixels=ctx.createImageData(512,512),random=seededRandom(81);
@@ -128,6 +127,7 @@ function RoofDetails({layout:l}:{layout:Layout}){
  </group>)}</>;
 }
 export function MarsExterior({layout:l,preview=false}:{layout:Layout;preview?:boolean}){
+ const dustCovered=useGame(s=>activeSurfaceIncidents(s).some(e=>e.task==='dust')),solarOnline=useGame(s=>!roomSuspended(s,'solar'));
  const buildings=useGame(s=>s.buildings),expanded=useGame(s=>s.expandedPlots),plots=useMemo(()=>ownedPlots(expanded),[expanded]);
  const plan=useMemo(()=>exteriorPlan(l,buildings),[l,buildings]),texture=useMemo(()=>regolithTexture(),[]);
  const position=useExplorer(s=>s.position),cx=Math.floor((preview?0:position[0])/CHUNK_SIZE),cz=Math.floor((preview?0:position[2])/CHUNK_SIZE);
@@ -147,7 +147,7 @@ export function MarsExterior({layout:l,preview=false}:{layout:Layout;preview?:bo
   <StreamedTerrain layout={l} plots={plots} texture={texture} focus={preview?[0,0,0]:undefined}/>
   {plan.arrays.map(({building:b,x,z})=><group key={b.id} position={[x,meshGroundHeight(l,x,z,plots),z]}><RigidBody type="fixed" colliders={false}>
    {[-1.7,0,1.7].map(offset=><group key={offset}><CuboidCollider position={[offset*3,2.7,0]} rotation={[-.2,0,0]} args={[2.325,.18,7.95]}/><CuboidCollider position={[offset*3,2.7-1.8*Math.cos(.2),1.8*Math.sin(.2)]} rotation={[-.2,0,0]} args={[.18,1.5,5.4]}/></group>)}
-   <group scale={3}><BuildingModel kind="solar" operating={b.active}/></group>
+   <group scale={3}><BuildingModel kind="solar" operating={b.active&&solarOnline} dustCovered={dustCovered}/></group>
   </RigidBody></group>)}
   <RockField rocks={plan.rocks} layout={l} plots={plots}/><RockField rocks={extraRocks} layout={l} plots={plots}/>
   {plan.routes.map(r=><Ribbon key={r.id} route={r} layout={l} plots={plots}/>)}
@@ -159,16 +159,4 @@ export function MarsExterior({layout:l,preview=false}:{layout:Layout;preview?:bo
   </group>)}
  </>;
 }
-export function MarsSky({layout:l}:{layout:Layout}){
- const sky=useRef<THREE.Mesh>(null),sun=useRef<THREE.Mesh>(null),dust=useRef<THREE.Points>(null),storm=useGame(s=>s.environment.dustUntil>s.sol);
- const sunDirection=useMemo(()=>new THREE.Vector3(-175,252,-150),[]);
- const skyUniforms=useMemo(()=>({zenith:{value:new THREE.Color(C.sky)},horizon:{value:new THREE.Color(C.fog)}}),[]);
- const dustUniforms=useMemo(()=>({time:{value:0},opacity:{value:.12}}),[]);
- const particles=useMemo(()=>{const random=seededRandom(981),a=new Float32Array(1100*3);for(let i=0;i<1100;i++)a.set([(random()-.5)*300,.5+random()*10,(random()-.5)*300],i*3);return a},[]);
- useFrame(({camera},dt)=>{sky.current?.position.copy(camera.position);sun.current?.position.copy(camera.position).add(sunDirection);dustUniforms.time.value+=Math.min(dt,.05);dustUniforms.opacity.value=storm?.23:.09;if(dust.current){dust.current.visible=!l.cells.has(cellAt(useExplorer.getState().position));dust.current.position.set(camera.position.x,camera.position.y-2,camera.position.z)}});
- return <>
-  <mesh ref={sky} raycast={noRaycast} renderOrder={-10}><sphereGeometry args={[430,32,16]}/><shaderMaterial side={THREE.BackSide} depthWrite={false} uniforms={skyUniforms} vertexShader={'varying vec3 direction; void main(){ direction=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }'} fragmentShader={'uniform vec3 zenith; uniform vec3 horizon; varying vec3 direction; void main(){float t=pow(max(direction.y,0.),.55); gl_FragColor=vec4(mix(horizon,zenith,t),1.); \n #include <tonemapping_fragment>\n #include <colorspace_fragment>\n }'}/></mesh>
-  <mesh ref={sun} position={[-175,252,-150]} raycast={noRaycast}><sphereGeometry args={[1.2,16,12]}/><meshBasicMaterial color="#fff0d0" fog={false}/></mesh>
-  <points ref={dust} raycast={noRaycast}><bufferGeometry><bufferAttribute attach="attributes-position" args={[particles,3]}/></bufferGeometry><shaderMaterial transparent depthWrite={false} uniforms={dustUniforms} vertexShader={'uniform float time; varying float fade; void main(){vec3 p=position; p.x=mod(p.x+time*.8+150.,300.)-150.;p.y+=sin(time*.4+p.z)*.2;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(32./max(1.,-mv.z),1.,2.);fade=1.-smoothstep(20.,140.,-mv.z);}'} fragmentShader={'uniform float opacity; varying float fade; void main(){float d=length(gl_PointCoord-.5);gl_FragColor=vec4(.61,.52,.52,(1.-smoothstep(.1,.5,d))*opacity*fade);}'}/></points>
- </>;
-}
+export { MarsAtmosphere as MarsSky } from '../weather/MarsAtmosphere';

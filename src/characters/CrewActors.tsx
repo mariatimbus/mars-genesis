@@ -10,6 +10,7 @@ import type { Fixture } from '../explorer/fixtures';
 import { clearFloor, crewBerths, makeCrewNavigation, nearestNode, roomDestination } from './crewNavigation';
 import { activityLabel, createCrewAgent, stepCrew, type CrewAgent } from './crewRoutine';
 import { useCrewLife, type CrewPresence } from './crewStore';
+import { useSurfaceWeather } from '../weather/store';
 import type { CrewMember } from '../simulation/types';
 function CrewActor({crew,agent,index}:{crew:CrewMember;agent:CrewAgent;index:number}){
  const root=useRef<THREE.Group>(null),pose=useRef<THREE.Group>(null),label=useRef<THREE.Sprite>(null),motion=useRef<AstronautMotion>({speed:0,sleeping:false}),yaw=useRef(agent.heading);
@@ -43,20 +44,20 @@ export function CrewActors({layout:l,fixtures}:{layout:Layout;fixtures:Fixture[]
    const a=createCrewAgent(c.id,nearestNode(nav,position)??fallback,berth);if(p?.berthId===berth?.id){a.blend=p?.blend??0;a.activity=p?.activity??'working';a.heading=p?.heading??0;}result.set(c.id,a);
   });return result;
  },[nav,berths,signature,playerId]);
- const clock=useRef(useCrewLife.getState().seconds),revision=useRef(useCrewLife.getState().revision),sample=useRef(0);
+ const sample=useRef(0);
  useFrame((_,delta)=>{
   const e=useExplorer.getState(),g=useGame.getState(),state=useCrewLife.getState();
-  if(state.revision!==revision.current){clock.current=state.seconds;revision.current=state.revision;}
+  const seconds=useSurfaceWeather.getState().seconds;
   const active=e.locked&&!e.panel&&!useTrainingUI.getState().open&&!document.hidden&&g.status==='playing'&&!g.pendingEvent;
   if(!active){for(const a of agents.values())a.speed=0;return;}
-  const dt=Math.min(.1,Math.max(0,delta));clock.current+=dt;sample.current+=dt;
+  const dt=Math.min(.1,Math.max(0,delta));sample.current+=dt;
   const members=g.astronauts.filter(c=>c.alive&&c.id!==e.playerId),shelter=g.effects.some(effect=>effect.shelter&&effect.untilSol>g.sol);
   members.forEach((c,i)=>{const a=agents.get(c.id);if(!a)return;const obstacles=[...agents.values()].filter(other=>other!==a&&other.blend===0).map(other=>other.position);
    if(e.position[1]<FLOOR+2&&e.position[1]>FLOOR-.5)obstacles.push({x:e.position[0],z:e.position[2]});
-   const door=stepCrew(a,c,nav,clock.current,dt,i,obstacles,e.doors,shelter);
+   const door=stepCrew(a,c,nav,seconds,dt,i,obstacles,e.doors,shelter);
    if(door){const d=l.doors.find(d=>d.id===door);if(d&&!d.airlock)useExplorer.setState(s=>({doors:{...s.doors,[door]:true}}));}
   });
-  if(sample.current>=.5){const snapshot:Record<string,CrewPresence>={};for(const a of agents.values())snapshot[a.id]={...a.position,activity:a.activity,destination:a.destination,heading:a.heading,blend:a.blend,berthId:a.berth?.id??null};state.publish(clock.current,snapshot);sample.current=0;}
+  if(sample.current>=.5){const snapshot:Record<string,CrewPresence>={};for(const a of agents.values())snapshot[a.id]={...a.position,activity:a.activity,destination:a.destination,heading:a.heading,blend:a.blend,berthId:a.berth?.id??null};state.publish(seconds,snapshot);sample.current=0;}
  });
  return <>{crew.filter(c=>c.alive&&c.id!==playerId).map((c,i)=>{const a=agents.get(c.id);return a?<CrewActor key={c.id} crew={c} agent={a} index={i}/>:null})}</>;
 }

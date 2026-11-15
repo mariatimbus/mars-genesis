@@ -22,6 +22,7 @@ import { groundReady, canonicalPosition, nearbyLandmarks } from './planet';
 import { meshGroundHeight } from './fixtures';
 import { ownedPlots } from '../game/worldConfig';
 import { CrewActors } from '../characters/CrewActors';
+import { CorridorLighting } from './CorridorLighting';
 import { makeFixtures, type Fixture } from './fixtures';
 import { CELL, FLOOR, cellKey, cellAt, roomAt, inAirlock, doorIsOpen, type Layout, type Room, type Door, type Point } from './layout';
 
@@ -88,8 +89,8 @@ export function Base({layout:l}:{layout:Layout}){
  const floorMap=useMemo(()=>panelTexture(true),[]),wallMap=useMemo(()=>panelTexture(false),[]);
  useEffect(()=>()=>{floorMap.dispose();wallMap.dispose()},[floorMap,wallMap]);
  return <>
- <IndustrialStructure layout={l}/>
- {[...l.cells].map(k=>{const [ix,iz]=k.split(',').map(Number),x=ix*CELL,z=iz*CELL,room=roomAt(l,[x,0,z]);return <group key={k}>
+ <IndustrialStructure layout={l}/><CorridorLighting layout={l}/>
+ {[...l.cells].map(k=>{const [ix,iz]=k.split(',').map(Number),x=ix*CELL,z=iz*CELL;return <group key={k}>
  <Solid p={[x,FLOOR-.18,z]} size={[3,.36,3]} color="#c4c7d3" texture={floorMap}/>
  <Solid p={[x,FLOOR+3.3,z]} size={[3,.2,3]} color={C.dark}/>
  {[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>{if(l.cells.has(cellKey(ix+dx,iz+dz)))return null;const outer=Math.abs(x-l.airlock.x)<.1&&Math.abs(z+dz*1.5-l.airlock.outerZ)<.1;if(outer)return null;return <group key={`${dx}-${dz}`}>
@@ -99,7 +100,6 @@ export function Base({layout:l}:{layout:Layout}){
  <mesh position={[x+dx*1.36,FLOOR+2.9,z+dz*1.36]}><boxGeometry args={dx?[.06,.07,2.5]:[2.5,.07,.06]}/><meshBasicMaterial color="#7981a0"/></mesh>
  {[-1,1].map(side=><mesh key={side} position={[x+dx*1.36+(dx?0:side*1.4),FLOOR+1.65,z+dz*1.36+(dz?0:side*1.4)]} castShadow><boxGeometry args={dx?[.12,3,.12]:[.12,3,.12]}/><meshStandardMaterial color={C.burgundy} metalness={.65} roughness={.45}/></mesh>)}
  </group>})}
- {!room&&<mesh position={[x,FLOOR+3.15,z]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[.3,2]}/><meshBasicMaterial color="#abb6d3" side={THREE.DoubleSide}/></mesh>}
  </group>})}
  {fixtures.map(f=><Equipment key={f.id} f={f} r={l.rooms.find(r=>r.id===f.roomId)!}/>)}
  {l.rooms.map(r=><group key={r.id}>
@@ -133,7 +133,6 @@ export function Astronaut({layout:l}:{layout:Layout}){
    const s=useExplorer.getState();
    if(MOVEMENT_CODES.has(event.code)){if(!s.locked||s.panel)return;event.preventDefault();heldKeys.add(event.code)}
    if(event.code==='KeyM'&&!event.repeat&&!s.panel){event.preventDefault();useExplorer.setState({mapExpanded:!s.mapExpanded})}
-   if(event.code==='KeyG'&&!event.repeat){event.preventDefault();s.open(s.panel?.type==='planet'?null:{type:'planet'})}
    if(event.code==='Tab'){event.preventDefault();s.open({type:'tablet'})}
    if(event.code!=='KeyE'||event.repeat||!s.locked)return;
    event.preventDefault();if(s.activeRover){useExplorer.setState({exitRequested:true});return;}

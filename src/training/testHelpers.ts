@@ -5,7 +5,7 @@ import { tasks, type TaskId } from './catalog';
 export const circuitSolution:[number,number[]][]=[[1,[1,2,3,9]],[2,[5,11,17,23,29]],[3,[16,22]],[4,[7,8,14,20,26,27]],[5,[18,24,30,31,32,33]]];
 import type { SurvivalState } from '../simulation/types';
 export function solveTask(s:SurvivalState,id:TaskId):SurvivalState {
- let state=s;const act=(type:string,index?:number,value?:number)=>{state=applyTraining(state,id,{type,index,value},1000)};
+ let state=applyTraining(s,id,{type:'begin-attempt'},1000);const act=(type:string,index?:number,value?:number)=>{state=applyTraining(state,id,{type,index,value},1000)};
  const tick=(seconds:number)=>{for(let i=0;i<seconds*4;i++)act('tick',undefined,.25)};
  switch(id){
  case 'dust':for(let i=0;i<12;i++){act('wipe',i);act('wipe',i)}act('wipe',0);break;

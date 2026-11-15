@@ -4,10 +4,12 @@ import type { Fixture } from '../explorer/fixtures';
 import type { Room } from '../explorer/layout';
 import { INDUSTRIAL as C } from './palette';
 import { CRTMonitor, HazardStrip, Pipe, Reactor } from './IndustrialKit';
+import { facilityUnlocked,startupKind } from '../simulation/commissioning';
+import { roomSuspended } from '../weather/incidents';
 
 export function MachineDetail({fixture:f,room:r}:{fixture:Fixture;room:Room}){
- const g=useGame(useShallow(s=>({resources:s.resources,systems:s.systems,sol:s.sol,building:s.buildings.find(b=>b.id===r.buildingId)}))),building=g.building,[w,h,d]=f.size,online=!!building?.active&&(building.damage??0)<80;
- const status=(building?.damage??0)>0?'FAULT':online?'ONLINE':'STANDBY';
+ const g=useGame(useShallow(s=>({resources:s.resources,systems:s.systems,sol:s.sol,building:s.buildings.find(b=>b.id===r.buildingId),unlocked:facilityUnlocked(s,r.kind),suspended:r.kind!=='habitat'&&roomSuspended(s,startupKind(r.kind))}))),building=g.building,[w,h,d]=f.size,online=!!building?.active&&g.unlocked&&(building.damage??0)<80;
+ const status=g.suspended?'MAINTENANCE LOCK':(building?.damage??0)>0?'FAULT':online?'ONLINE':'STANDBY';
  const lines=[`MODULE  ${r.buildingId.toUpperCase()}`,`POWER BUS   ${g.resources.power.toFixed(1)} kWh`,`OXYGEN      ${g.resources.oxygen.toFixed(2)} kg`,`WATER LOOP  ${g.systems.waterKg.toFixed(1)} kg`,`FOOD STORE  ${g.resources.food.toFixed(1)} kg`,`DAMAGE      ${(building?.damage??0).toFixed(0)} %`,`MISSION     SOL ${String(g.sol).padStart(3,'0')}`,online?'CONTROL BUS CONNECTED':'COMMISSIONING REQUIRED'];
  if(f.type==='terminal')return <>
   <mesh position={[0,1.1,-.08]} castShadow><boxGeometry args={[w,.18,.28]}/><meshStandardMaterial color={C.burgundy} metalness={.5} roughness={.7}/></mesh>

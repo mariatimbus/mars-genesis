@@ -161,6 +161,6 @@ export function FilterStage({ t, send }: StageProps) {
         </button>)}
         <div className={`conductivity ${ran ? 'ok' : ''}`}><span>⚡ CONDUCTIVITY SENSOR</span><div className="meter-track"><span style={{ width: ran ? '12%' : '92%', background: ran ? '#3cc27a' : '#e2573b' }} /></div><small>{ran ? 'Low: few dissolved salts left' : 'Salty water conducts electricity well'}</small></div>
       </div>
-    <div className="stage-buttons"><Btn onClick={() => send('clear')}>↺ Empty the column</Btn><Btn primary onClick={() => send('run')}>💧 Run water</Btn><Btn disabled={!ran} onClick={() => send('test')}>🔬 Conductivity test</Btn></div>
+    {t.hard&&<p className="hard-stage-rules">Maintenance verification · sample {(t.values[0]??0)+1}/2. Build and test a fresh filter train for each sample.</p>}<div className="stage-buttons"><Btn onClick={() => send('clear')}>↺ Empty the column</Btn><Btn primary onClick={() => send('run')}>💧 Run water</Btn><Btn disabled={!ran} onClick={() => send('test')}>🔬 Conductivity test</Btn></div>
   </>} />;
 }

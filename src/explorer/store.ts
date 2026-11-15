@@ -9,7 +9,7 @@ import { meshGroundHeight } from './fixtures';
 import { ownedPlots } from '../game/worldConfig';
 import type { RoverState } from './roverPhysics';
 export type Interaction={type:'door'|'suit'|'cycle'|'relay'|'terminal'|'crew'|'storage'|'rover';id:string;label:string};
-export type ExplorerPanel={type:'tablet'|'terminal'|'repair'|'crew'|'planet';id?:string}|null;
+export type ExplorerPanel={type:'tablet'|'terminal'|'repair'|'crew';id?:string}|null;
 interface Explorer {
  rovers:RoverState[];activeRover:string|null;exitRequested:boolean;waypoint:string;visited:string[];locationSaved:boolean;relocation:number;
  initRovers:(l:Layout)=>void;boardRover:(id:string,deploy?:boolean)=>boolean;returnToBase:(l:Layout)=>void;

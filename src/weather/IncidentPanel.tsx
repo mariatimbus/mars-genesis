@@ -1,0 +1,47 @@
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { LockKeyhole,Wrench,RotateCcw,Siren } from 'lucide-react';
+import { useGame } from '../store/game';
+import { taskById,roomNames } from '../training/catalog';
+import { initialTask,type TaskAction } from '../training/engine';
+import { TaskStage } from '../training/TaskStage';
+import { PlayExtra } from '../training/stages/common';
+import { briefings } from '../training/briefings';
+import { useTrainingUI } from '../training/ui';
+import { activeSurfaceIncidents,blockingSurfaceIncidents,type SurfaceIncidentId } from './incidents';
+import { WEATHER_SOURCES } from './calendar';
+import './incidents.css';
+import { attemptFor,failedLessonRoots,retryRemaining } from '../training/attempts';
+import { AttemptFailure,AttemptRules,AttemptStatus } from '../training/AttemptPanel';
+
+export function SurfaceIncidentNotice(){
+ const g=useGame(),incidents=activeSurfaceIncidents(g);
+ const failures=failedLessonRoots(g);if(!incidents.length&&!failures.length)return null;
+ const roots=[...new Set(incidents.map(e=>e.task))];
+ return <section className={`surface-incident-notice ${incidents.length?'is-base-alert':''}`} aria-label="System maintenance locks"><strong>{incidents.length?<Siren size={18}/>:<LockKeyhole size={14}/>} {incidents.length?'BASE ALERT · ':''}{roots.length+failures.length} MAINTENANCE LOCK{roots.length+failures.length>1?'S':''}</strong>{roots.map(task=>{
+  const event=incidents.find(e=>e.task===task)!,t=taskById(task);
+  return <div key={task}><span>{event.title}</span><small>{roomNames[t.room]} · {t.title}</small><button onClick={()=>useTrainingUI.getState().repair(task)}><Wrench size={13}/> Restore this step</button></div>;
+ })}{failures.map(task=><div key={`failed-${task}`}><span className="failed-challenge-label">Attempt failed · {taskById(task).title}</span><small>{retryRemaining(g,task)>0?`${Math.ceil(retryRemaining(g,task))} active seconds until retry`:'Retry available · system still isolated'}</small><button onClick={()=>useTrainingUI.getState().repair(task)}>Open failed challenge</button></div>)}<p>Dependent steps are paused. Your stars and discoveries are saved.</p></section>;
+}
+export function IncidentLock({task}:{task:Parameters<typeof blockingSurfaceIncidents>[1]}){
+ const g=useGame(),event=blockingSurfaceIncidents(g,task)[0];if(!event)return null;
+ return <div className="training-locked surface-task-lock"><LockKeyhole size={30}/><h3>Temporarily paused by a surface event</h3><p>{event.title} · Surface sol {event.sol}</p><p>Restore <b>{taskById(event.task).title}</b> to release this dependency. Earlier completion and stars are saved.</p><button onClick={()=>useTrainingUI.getState().repair(event.task)}><Wrench size={15}/> Go to the repair</button></div>;
+}
+export function IncidentRepair({id}:{id:SurfaceIncidentId}){
+ const g=useGame(),event=activeSurfaceIncidents(g).find(e=>e.id===id),[started,setStarted]=useState(false),[running,setRunning]=useState(false);
+ const task=event?.task??'dust',progress=g.commissioning.training.incidents;
+ const t=useMemo(()=>progress?.repairs[task]??initialTask(task),[progress?.repairs,task]);
+ const run=attemptFor(g,task,'repair');
+ const act=useCallback((action:TaskAction)=>useGame.getState().surfaceRepairAction(id,action),[id]);
+ useEffect(()=>{
+  if(!started||!running||t.done||run?.status==='failed'||g.status!=='playing')return;
+  let last=performance.now();const timer=setInterval(()=>{const now=performance.now(),dt=Math.min(.5,(now-last)/1000);last=now;if(!document.hidden)act({type:'tick',value:dt})},250);
+  return()=>clearInterval(timer);
+ },[started,running,t.done,g.status,act,run?.status]);
+ useEffect(()=>{const pause=()=>setRunning(false);window.addEventListener('blur',pause);document.addEventListener('visibilitychange',pause);return()=>{window.removeEventListener('blur',pause);document.removeEventListener('visibilitychange',pause)}},[]);
+ if(!event)return null;
+ const source=WEATHER_SOURCES[event.source];
+ const extra=<div className="play-extra"><div className="training-feedback" role="status">{t.note||event.repair}</div><details className="play-rules"><summary>Repair instructions</summary><ol>{briefings[task].rules.map(rule=><li key={rule}>{rule}</li>)}</ol></details><button className="training-reset" onClick={()=>{setRunning(false);act({type:'restart'})}}><RotateCcw size={13}/> Restart repair</button></div>;
+ return <section className={`surface-repair ${started&&run?.status!=='failed'?'is-playing':''}`}>{!started&&run?.status!=='failed'&&<div className="surface-repair-brief"><span><LockKeyhole size={14}/> MAINTENANCE LOCK · SURFACE SOL {event.sol}</span><h3>{event.title}</h3><p>{event.problem}</p><p><b>Repair:</b> {event.repair}</p><small>Emergency maintenance bench · independent training supplies · no repeat rewards. Restoring this step automatically releases its dependents.</small><details><summary>Real observation / game scenario</summary><p>The weather chronology is archived. This hardware interruption and its repair are fictional gameplay scenarios. Clearing a panel does not remove airborne dust or the clouds.</p><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a></details></div>}
+ <AttemptStatus id={task} mode="repair"/>{run?.status==='failed'?<AttemptFailure id={task} mode="repair" onRetry={()=>{act({type:'begin-attempt'});setStarted(true);setRunning(false)}}/>:!started?<><AttemptRules id={task} mode="repair"/><button className="surface-start-repair" disabled={g.status!=='playing'} onClick={()=>{act({type:'begin-attempt'});setStarted(true)}}><Wrench size={16}/> {run?.status==='running'?'Resume timed repair':'Start hard repair'}: {taskById(task).title}</button></>:<fieldset className="training-stage" disabled={g.status!=='playing'}><PlayExtra.Provider value={extra}><TaskStage id={task} t={t} act={act} running={running} setRunning={setRunning}/></PlayExtra.Provider></fieldset>}
+ </section>;
+}

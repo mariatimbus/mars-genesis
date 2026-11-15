@@ -2,6 +2,7 @@ import { validPlacement, type Kind } from './engine';
 import type { SurvivalState } from './types';
 import { TRAINING_ROOMS, roomNames, roomTasks, type TrainingRoom } from '../training/catalog';
 import { freshTraining, type TrainingProgress } from '../training/engine';
+import { roomSuspended } from '../weather/incidents';
 export const STARTUP_KINDS=TRAINING_ROOMS;
 export type StartupKind=TrainingRoom;
 export interface CommissioningState {
@@ -13,7 +14,12 @@ export interface CommissioningState {
 }
 export const STARTUP_CHALLENGES=STARTUP_KINDS.map(kind=>({kind,label:roomNames[kind],title:roomTasks(kind)[0].title,outcome:`${roomNames[kind]} facility online.`}));
 export const startupKind=(kind:Kind):StartupKind=>kind==='storage'?'water':kind==='habitat'?'oxygen':kind;
-export const facilityUnlocked=(s:Pick<SurvivalState,'commissioning'>,kind:Kind)=>(kind==='habitat'&&s.commissioning.legacyHabitat)||s.commissioning.completed.includes(startupKind(kind));
+export const facilityUnlocked=(s:Pick<SurvivalState,'commissioning'>,kind:Kind)=>{
+ const completed=(kind==='habitat'&&s.commissioning.legacyHabitat)||s.commissioning.completed.includes(startupKind(kind));
+ // Shelter circulation stays on the existing emergency reserve. A maintenance
+ // lock stops production modules, not the pressure integrity of the habitat.
+ return completed&&(kind==='habitat'||!roomSuspended(s,startupKind(kind)));
+};
 export const commissioningComplete=(s:Pick<SurvivalState,'commissioning'>)=>STARTUP_KINDS.every(k=>s.commissioning.completed.includes(k));
 export const freshCommissioning=():CommissioningState=>({completed:[],attempts:{},feedback:null,legacyHabitat:false,training:freshTraining()});
 export function migrateTraining(s:SurvivalState):SurvivalState {

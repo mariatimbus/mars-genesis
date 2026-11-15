@@ -2,7 +2,7 @@ import type { CrewMember } from '../simulation/types';
 import type { Kind } from '../simulation/engine';
 import { doorIsOpen, type Door } from '../explorer/layout';
 import { clearSegment, findCrewPath, roomDestination, type CrewNavigation, type CrewBerth, type NavPoint } from './crewNavigation';
-// An artistic habitat clock: a full day takes twelve active minutes. It does not advance campaign sols.
+// Shared with the 720-sol surface calendar: a full day takes twelve active minutes.
 export const HABITAT_DAY_SECONDS=720, DEFAULT_HABITAT_SECONDS=HABITAT_DAY_SECONDS/3;
 export const habitatHour=(seconds:number)=>((seconds/HABITAT_DAY_SECONDS*24)%24+24)%24;
 export const habitatClock=(seconds:number)=>{const minutes=Math.floor(habitatHour(seconds)*60);return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`};

@@ -5,7 +5,7 @@ import type { StageProps } from './common';
 import { Btn, Meter, Play } from './common';
 
 export function DustStage({ t, send }: StageProps) {
-  const v = t.values, dust = v.reduce((a, b) => a + b, 0), light = Math.round((24 - dust) / 24 * 100);
+  const v = t.values, dust = v.reduce((a, b) => a + b, 0), capacity=t.hard?36:24, light = Math.max(0,Math.round((capacity - dust) / capacity * 100));
   return <Play vis={<>
     <div className="pv-stage">
       <svg viewBox="0 0 600 120" className="stage-svg" aria-hidden="true">
@@ -19,8 +19,8 @@ export function DustStage({ t, send }: StageProps) {
       </svg>
       <div className="pv-frame">
         <div className="pv-array" onPointerMove={e => { if (e.buttons === 1) { const cell = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-cell]'); if (cell) send('wipe', Number(cell.dataset.cell)); } }}>
-          {v.map((d, i) => <button data-cell={i} aria-label={`Brush panel cell ${i + 1}${d ? '' : ', clean'}`} key={i} className={`pv-cell dust-${d}`} onPointerDown={() => send('wipe', i)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); send('wipe', i); } }}>
-            <span className="pv-dust" /><small>{d === 2 ? 'DUSTY' : d === 1 ? 'ALMOST' : '✓'}</small>
+          {v.map((d, i) => <button data-cell={i} aria-label={`Brush panel cell ${i + 1}${d ? '' : ', clean'}`} key={i} className={`pv-cell dust-${Math.min(2,d)}`} onPointerDown={() => send('wipe', i)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); send('wipe', i); } }}>
+            <span className="pv-dust" /><small>{d >= 2 ? 'DUSTY' : d === 1 ? 'ALMOST' : '✓'}</small>
           </button>)}
         </div>
         <div className="pv-legs"><span /><span /></div>
@@ -28,7 +28,7 @@ export function DustStage({ t, send }: StageProps) {
     </div>
 </>} controls={<>
     <Meter label="⚡ Power from the array" value={light} unit="%" color={light > 80 ? '#5fe08a' : light > 40 ? '#f2d33c' : '#e2573b'} />
-    <p className="stage-caption">Hold the mouse button and sweep across the panel, or tap the cells.</p>
+    {t.hard&&<p className="hard-stage-rules">Storm repair: three dust layers per cell and two returning gusts. Clear every layer before the deadline.</p>}<p className="stage-caption">Hold the mouse button and sweep across the panel, or tap the cells.</p>
   </>} />;
 }
 

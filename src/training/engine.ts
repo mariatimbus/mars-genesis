@@ -1,17 +1,21 @@
 import { dependencies, roomTasks, taskById, tasks, type TaskId, type TrainingRoom } from './catalog';
 import type { SurvivalState } from '../simulation/types';
-export interface TaskState {values:number[];marks:number[];phase:number;time:number;mistakes:number;done:boolean;note:string}
+import { freshSurfaceIncidents,roomSuspended,taskSuspended,type SurfaceIncidentProgress } from '../weather/incidents';
+import { attemptFor,retryRemaining,freshAttempt,withAttempt,failAttempt,fatalAttemptAction,CHALLENGE_RULES,failedLessonRoots,type ChallengeRuns } from './attempts';
+import { blockingSurfaceIncidents,taskDependsOn } from '../weather/incidents';
+export interface TaskState {values:number[];marks:number[];phase:number;time:number;mistakes:number;done:boolean;note:string;hard?:boolean;lastMistake?:{message:string;action:TaskAction}}
 export interface TaskRecord {stars:1|2|3;mistakes:number;credits:number}
-export interface TrainingProgress {tasks:Partial<Record<TaskId,TaskState>>;records:Partial<Record<TaskId,TaskRecord>>;credits:number;messageSentAt:number|null;messageDueAt:number|null;replyDueAt:number|null;weatherUnlocked:boolean}
+export interface TrainingProgress {tasks:Partial<Record<TaskId,TaskState>>;records:Partial<Record<TaskId,TaskRecord>>;credits:number;messageSentAt:number|null;messageDueAt:number|null;replyDueAt:number|null;weatherUnlocked:boolean;incidents?:SurfaceIncidentProgress;runs?:ChallengeRuns}
 export interface TaskAction {type:string;index?:number;value?:number}
-export const freshTraining=():TrainingProgress=>({tasks:{},records:{},credits:0,messageSentAt:null,messageDueAt:null,replyDueAt:null,weatherUnlocked:false});
-export function initialTask(id:TaskId):TaskState {
+export const freshTraining=():TrainingProgress=>({tasks:{},records:{},credits:0,messageSentAt:null,messageDueAt:null,replyDueAt:null,weatherUnlocked:false,incidents:freshSurfaceIncidents()});
+export function initialTask(id:TaskId,hard=false):TaskState {
  const values:Partial<Record<TaskId,number[]>>={dust:Array(12).fill(2),sun:[0,0,0],battery:circuitStart(),scan:[0],melt:[0,0,0,-20,0,0,0,0],fill:[0],split:[0,0,0],air:[50,0,0],lights:[0,0,0],plant:[-1,-1,-1],irrigate:[10,20,10],gravity:[1],antenna:[0,0,12],rock:[0]};
- return {values:values[id]??[],marks:[],phase:0,time:0,mistakes:0,done:false,note:''};
+ return {values:hard&&id==='dust'?Array(12).fill(3):values[id]??[],marks:[],phase:0,time:0,mistakes:0,done:false,note:'',...(hard?{hard:true}:{})};
 }
 const clamp=(v:number,min=0,max=100)=>Math.min(max,Math.max(min,v));
 export const sunAngle=(time:number)=>Math.round(45+25*Math.sin(time*.18));
 export const lightCapture=(angle:number,time:number)=>Math.max(0,Math.cos((angle-sunAngle(time))*Math.PI/180));
+export const lightRecipeValid=(v:number[],hard=false)=>hard?v[0]>=58&&v[0]<=68&&v[1]>=36&&v[1]<=46&&v[2]>=8&&v[2]<=18&&v.reduce((a,b)=>a+b,0)<=115:v[0]>=50&&v[1]>=30&&v.reduce((a,b)=>a+b,0)<=130;
 // 6×6 cable board. Each colour joins two device ports; cables cannot cross or pass the rock tile.
 export const CIRCUIT_SIZE=6,CIRCUIT_ROCK=19;
 export const circuitCables=[
@@ -39,9 +43,9 @@ export const gravityNotes=['Maya: Muscles that do not have to fight gravity get 
 export const ANTENNA_PAUSE=2;
 export const antennaTrip=(oneWayMinutes:number)=>2*oneWayMinutes+2*ANTENNA_PAUSE; // out, Earth replies, back, a moment to read it on Mars
 export const kitTargets=[0,1,2,3,3]; // wounds, illness, radiation monitoring, checkup
-export function blockedRoom(s:Pick<SurvivalState,'commissioning'>,room:TrainingRoom){return dependencies[room].filter(k=>!s.commissioning.completed.includes(k))}
+export function blockedRoom(s:Pick<SurvivalState,'commissioning'>,room:TrainingRoom){return dependencies[room].filter(k=>!s.commissioning.completed.includes(k)||roomSuspended(s,k))}
 export function taskAvailable(s:Pick<SurvivalState,'commissioning'>,id:TaskId){
- const t=taskById(id);if(!t||blockedRoom(s,t.room).length)return false;
+ const t=taskById(id);if(!t||blockingSurfaceIncidents(s,id).length||retryRemaining(s,id)>0||failedLessonRoots(s).some(root=>root!==id&&taskDependsOn(id,root))||blockedRoom(s,t.room).length)return false;
  const steps=roomTasks(t.room),index=steps.findIndex(t=>t.id===id);
  return steps.slice(0,index).every(t=>!!s.commissioning.training.records[t.id]);
 }
@@ -49,7 +53,7 @@ export function taskStars(t:TaskState):1|2|3 {return t.mistakes===0?3:t.mistakes
 export function reduceTask(id:TaskId,current:TaskState,a:TaskAction):TaskState {
  if(current.done||!tasks.some(t=>t.id===id)||a.value!==undefined&&!Number.isFinite(a.value)||a.index!==undefined&&!Number.isInteger(a.index))return current;
  const t=structuredClone(current),v=t.values,m=t.marks,i=a.index??-1,value=a.value??0;
- const fail=(note:string)=>{t.mistakes++;t.note=note};
+ const fail=(note:string)=>{t.mistakes++;t.note=note;t.lastMistake={message:note,action:{...a}}};
  const finish=()=>{t.done=true;t.note='Training complete. Your discovery page is ready.'};
  const is=(type:string)=>a.type===type;
  const valid=(count:number)=>i>=0&&i<count;
@@ -57,7 +61,9 @@ export function reduceTask(id:TaskId,current:TaskState,a:TaskAction):TaskState {
  if(tick)t.time+=tick;
  switch(id){
  case 'dust':
-  if(is('wipe')&&valid(12)&&v[i]>0){v[i]--;t.note='Dust cleared: more light reaches the cells.';if(t.phase===0&&v.filter(x=>x===0).length>=6){t.phase=1;v[0]=1;t.note='A small gust returned dust to cell 1. Sweep it once more.';}if(v.every(x=>x===0))finish();}break;
+  if(is('wipe')&&valid(12)&&v[i]>0){v[i]--;t.note='Dust cleared: more light reaches the cells.';
+   if(t.hard){const clean=v.filter(x=>x===0).length;if(t.phase===0&&clean>=4){t.phase=1;v[0]=2;v[3]=2;t.note='Storm gust 1: two cells need cleaning again.';}else if(t.phase===1&&clean>=8){t.phase=2;v[1]=2;v[6]=2;t.note='Storm gust 2: clean the two recoated cells before the deadline.';}}
+   else if(t.phase===0&&v.filter(x=>x===0).length>=6){t.phase=1;v[0]=1;t.note='A small gust returned dust to cell 1. Sweep it once more.';}if(v.every(x=>x===0))finish();}break;
  case 'sun':
   if(is('angle'))v[0]=clamp(value,0,90);
   if(tick){if(Math.abs(v[0]-sunAngle(t.time))<=12){v[1]+=tick;v[2]=0;}else{v[2]+=tick;if(v[2]>=4){fail('The panel is losing light. Follow the yellow Sun marker.');v[2]=0;}}if(v[1]>=15)finish();}break;
@@ -83,7 +89,7 @@ export function reduceTask(id:TaskId,current:TaskState,a:TaskAction):TaskState {
   if(is('choose')&&valid(3)&&!m.includes(i)&&m.length<3){m.push(i);t.phase=0;}
   if(is('clear')){t.marks=[];t.phase=0;}
   if(is('run')){if(m.length===3&&m.every((n,j)=>n===j)){t.phase=1;t.note='Coarse debris, dust and dissolved salts removed in the model.';}else{fail('The fine barrier clogged. Clear the column; start with coarse debris.');t.phase=0;}}
-  if(is('test')){if(t.phase===1)finish();else fail('Arrange the filters and run the water before testing.');}break;
+  if(is('test')){if(t.phase===1){if(t.hard&&(v[0]??0)===0){v[0]=1;t.phase=0;t.marks=[];t.note='First sample verified. Fit a fresh filter train and verify a second sample before release.';}else finish();}else fail('Arrange the filters and run the water before testing.');}break;
  case 'fill':
   if(is('pour')){v[0]=clamp(v[0]+10);if(v[0]>60)fail('The cell is overfilled. Other systems need this water too.');}
   if(is('drain'))v[0]=clamp(v[0]-10);
@@ -100,7 +106,7 @@ export function reduceTask(id:TaskId,current:TaskState,a:TaskAction):TaskState {
   if(tick){v[0]=clamp(v[0]+(v[1]-airDemand(t.time))*.12*tick);if(v[0]>=30&&v[0]<=80){v[2]+=tick;t.phase=0;}else if(t.phase===0){fail(v[0]>80?'Oxygen enrichment warning. Reduce the valve.':'Low oxygen score. Increase the valve.');t.phase=1;}if(v[2]>=30)finish();}break;
  case 'lights':
   if(is('light')&&valid(3))v[i]=clamp(value);
-  if(is('test')){if(v[0]>=50&&v[1]>=30&&v.reduce((a,b)=>a+b,0)<=130)finish();else fail('Supply red and blue light while keeping the total lighting budget at 130 or below.');}break;
+  if(is('test')){if(lightRecipeValid(v,t.hard))finish();else fail(t.hard?'Repair recipe rejected: red 58–68, blue 36–46, green 8–18, total at most 115.':'Supply red and blue light while keeping the total lighting budget at 130 or below.');}break;
  case 'plant':
   if(is('seed')&&valid(3)&&Number.isInteger(value)&&value>=0&&value<=2)v[i]=value;
   if(is('test')){if(new Set(v).size===3&&v.every(x=>x>=0))finish();else fail('Try a varied garden: lettuce, mizuna and one research crop.');}break;
@@ -129,16 +135,27 @@ export function reduceTask(id:TaskId,current:TaskState,a:TaskAction):TaskState {
   if(is('focus'))v[0]=clamp(value);
   if(is('identify')&&valid(3)){if(Math.abs(v[0]-65)>8)fail('The image is blurred. Adjust focus before recording.');else if(i===t.phase){t.phase++;v[0]=20;if(t.phase===3)finish();}else fail('Look closely at the visible texture. Record what you observe.');}break;
  case 'weather':
-  if(is('match')&&valid(4)&&!m.includes(i)){if(value===i){m.push(i);if(m.length===4)finish();}else fail('That socket measures something else. Match the sensor to its quantity.');}break;
+  if(is('match')&&valid(4)&&!m.includes(i)){if(value===i){m.push(i);if(m.length===4){if(t.hard&&t.phase===0){t.phase=1;t.marks=[];t.note='Wiring verified. Now match four independent calibration checks.';}else finish();}}else fail('That socket measures something else. Match the sensor to its quantity.');}break;
  }
  return JSON.stringify(t)===JSON.stringify(current)?current:t;
 }
 export function applyTraining(s:SurvivalState,id:TaskId,action:TaskAction,now=Date.now()):SurvivalState {
  if(s.status!=='playing'||s.pendingEvent||!taskAvailable(s,id)||!s.buildings.some(b=>b.kind===taskById(id).room))return s;
+ const previous=attemptFor(s,id),ruled=!!CHALLENGE_RULES[id];
+ if(action.type==='begin-attempt'){
+  if(!ruled||previous?.status==='running')return s;
+  let n=withAttempt(s,id,'lesson',freshAttempt(previous));
+  if(previous?.status==='failed'||previous?.status==='succeeded')n={...n,commissioning:{...n.commissioning,training:{...n.commissioning.training,tasks:{...n.commissioning.training.tasks,[id]:initialTask(id)}}}};
+  return n;
+ }
+ if(previous?.status==='failed')return s;
  const progress=s.commissioning.training,current=progress.tasks[id]??initialTask(id),next=reduceTask(id,current,action);
  if(next===current)return s;
  // Keep the unchanged 3D world stable while a slider or a training timer updates.
- const n:SurvivalState={...s,commissioning:{...s.commissioning,completed:[...s.commissioning.completed],attempts:{...s.commissioning.attempts},training:{...progress,tasks:{...progress.tasks,[id]:next},records:{...progress.records}}}},training=n.commissioning.training;
+ let n:SurvivalState={...s,commissioning:{...s.commissioning,completed:[...s.commissioning.completed],attempts:{...s.commissioning.attempts},training:{...progress,tasks:{...progress.tasks,[id]:next},records:{...progress.records}}}};
+ const run=previous?.status==='running'?previous:freshAttempt(previous);
+ if(ruled){n=withAttempt(n,id,'lesson',run);if(fatalAttemptAction(id,current,next,action))return failAttempt(n,id,'lesson',run,undefined,{kind:'operation',action:{...action},note:next.mistakes>current.mistakes?next.note:undefined});if(next.done)n=withAttempt(n,id,'lesson',{...run,status:'succeeded',suspends:false});}
+ const training=n.commissioning.training;
  const room=taskById(id).room;n.commissioning.attempts[room]=(n.commissioning.attempts[room]??0)+next.mistakes-current.mistakes;
  if(next.done){
   const old=training.records[id],stars=taskStars(next);training.records[id]={stars:Math.max(old?.stars??0,stars) as 1|2|3,mistakes:Math.min(old?.mistakes??Infinity,next.mistakes),credits:old?.credits??((old?.stars??stars)===3?15:10)};
@@ -155,6 +172,6 @@ export function applyTraining(s:SurvivalState,id:TaskId,action:TaskAction,now=Da
  return n;
 }
 export function restartTrainingTask(s:SurvivalState,id:TaskId):SurvivalState {
- if(s.status!=='playing'||s.pendingEvent||!taskAvailable(s,id))return s;
+ if(s.status!=='playing'||s.pendingEvent||!taskAvailable(s,id)||attemptFor(s,id)?.status==='failed')return s;
  return {...s,commissioning:{...s.commissioning,training:{...s.commissioning.training,tasks:{...s.commissioning.training.tasks,[id]:initialTask(id)}}}};
 }

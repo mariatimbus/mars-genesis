@@ -3,6 +3,7 @@ import { createScenario } from '../simulation/scenario';
 import { commissioningComplete, facilityUnlocked, migrateTraining } from '../simulation/commissioning';
 import { tasks, roomTasks, TRAINING_ROOMS, references } from './catalog';
 import { applyTraining, reduceTask, initialTask, restartTrainingTask, taskAvailable } from './engine';
+import { advanceChallengeClock,attemptFor } from './attempts';
 import { solveTask, solveTraining } from './testHelpers';
 
 describe('hands-on junior astronaut training',()=>{
@@ -68,7 +69,8 @@ describe('hands-on junior astronaut training',()=>{
   let s=solveTraining(createScenario()),training=s.commissioning.training;
   expect(training.messageSentAt).toBe(1000);expect(training.messageDueAt).toBe(1000+s.environment.commDelayMinutes*60000);expect(training.replyDueAt).toBe(1000+s.environment.commDelayMinutes*120000);
   const credits=training.credits,oldDue=training.replyDueAt;s=restartTrainingTask(s,'antenna');s=applyTraining(s,'antenna',{type:'send'},50000);expect(s.commissioning.training.tasks.antenna?.mistakes).toBe(1);
-  s=solveTask(s,'antenna');expect(s.commissioning.training.credits).toBe(credits);expect(s.commissioning.training.records.antenna?.stars).toBe(3);expect(s.commissioning.training.replyDueAt).toBe(oldDue);
+  expect(attemptFor(s,'antenna')?.status).toBe('failed');for(let i=0;i<60;i++)s=advanceChallengeClock(s,.5);
+  s=solveTask(s,'antenna');expect(attemptFor(s,'antenna')?.status).toBe('succeeded');expect(s.commissioning.training.credits).toBe(credits);expect(s.commissioning.training.records.antenna?.stars).toBe(3);expect(s.commissioning.training.replyDueAt).toBe(oldDue);
  });
  it('migrates a version 5 course without losing running systems, damage, reserves or crew',()=>{
   const s=createScenario();s.sol=8;s.buildings[0].active=true;s.buildings[0].damage=40;

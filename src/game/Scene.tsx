@@ -7,6 +7,8 @@ import { BuildingModel, Rover } from './Buildings';
 import { AstronautModel } from '../characters/AstronautModel';
 import { IndustrialLighting } from '../visuals/IndustrialLighting';
 import { INDUSTRIAL as C } from '../visuals/palette';
+import { MarsAtmosphere } from '../weather/MarsAtmosphere';
+import { activeSurfaceIncidents } from '../weather/incidents';
 import { useGame, simulationSnapshot } from '../store/game';
 import { calculateOperations } from '../simulation/lifeSupport';
 import { commissioningComplete, facilityUnlocked } from '../simulation/commissioning';
@@ -23,7 +25,7 @@ function Rocks({plots}:{plots:LandPlot[]}){const rocks=useMemo(()=>{let seed=30;
 function Corridors(){const buildings=useGame(s=>s.buildings);const paths=useMemo(()=>buildings.slice(1).filter(b=>b.kind!=='solar').map((b)=>{const targets=buildings.filter(a=>a.id!==b.id&&a.kind!=='solar'&&Math.hypot(a.x,a.z)<Math.hypot(b.x,b.z));const a=targets.sort((a,c)=>Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0]??buildings[0];const length=Math.hypot(a.x-b.x,a.z-b.z);return {x:(a.x+b.x)/2,z:(a.z+b.z)/2,length,angle:Math.atan2(a.x-b.x,a.z-b.z)};}),[buildings]);return <group>{paths.map((p,i)=><group key={i} position={[p.x,.25,p.z]} rotation={[0,p.angle,0]}><mesh rotation={[Math.PI/2,0,0]} castShadow receiveShadow><cylinderGeometry args={[.28,.28,p.length,10]}/><meshStandardMaterial color="#b7b6a5" roughness={.65} metalness={.4}/></mesh>{Array.from({length:Math.floor(p.length)},(_,j)=><mesh key={j} position={[0,0,j-p.length/2+.5]}><torusGeometry args={[.3,.035,5,12]}/><meshStandardMaterial color="#747b77"/></mesh>)}</group>)}</group>}
 function World({resetKey}:{resetKey:number}){
  const sim=useGame();const operations=useMemo(()=>calculateOperations(simulationSnapshot(sim)).report,[sim]);
- const dust=sim.environment.dustUntil>sim.sol;
+ const dust=sim.environment.dustUntil>sim.sol,dustCovered=activeSurfaceIncidents(sim).some(e=>e.task==='dust');
  const terrainPlots=useMemo(()=>[
   ...ownedPlots(sim.expandedPlots),
   // Keep pre-existing buildings from the previous larger-map version intact.
@@ -45,9 +47,9 @@ function World({resetKey}:{resetKey:number}){
  useEffect(()=>{controls.current?.reset()},[resetKey]);
  const valid=placing?validPlacement(placing,...hover,buildings,sim.expandedPlots)&&materials>=catalog[placing].cost&&!blocked:false;
  const pointer=(e:ThreeEvent<PointerEvent>)=>{if(placing){setHover([Math.round(e.point.x*2)/2,Math.round(e.point.z*2)/2]);}};
- return <><color attach="background" args={[C.sky]}/><fog attach="fog" args={dust?[C.fog,30,95]:[C.fog,65,160]}/><IndustrialLighting/>
+ return <><color attach="background" args={[C.sky]}/><fog attach="fog" args={dust?[C.fog,30,95]:[C.fog,65,160]}/><IndustrialLighting/><MarsAtmosphere overview/>
  <Terrain plots={terrainPlots}/><Rocks plots={terrainPlots}/><Corridors/>{sim.expanding&&<ExpansionPlots plots={candidates} terrainPlots={terrainPlots}/>}
- {buildings.map(b=><group key={b.id} position={[b.x,elevation(b.x,b.z,terrainPlots),b.z]} onClick={e=>{if(!placing&&!sim.expanding){e.stopPropagation();select(b.id)}}} onPointerOver={()=>{if(!placing&&!sim.expanding)document.body.style.cursor='pointer'}} onPointerOut={()=>{document.body.style.cursor='auto'}}><BuildingModel kind={b.kind} operating={b.active&&(b.damage??0)<80&&(operations.powered[b.id]??1)>0&&!(b.kind==='solar'&&(dust||sim.resources.power<10))} damaged={(b.damage??0)>0}/>
+ {buildings.map(b=><group key={b.id} position={[b.x,elevation(b.x,b.z,terrainPlots),b.z]} onClick={e=>{if(!placing&&!sim.expanding){e.stopPropagation();select(b.id)}}} onPointerOver={()=>{if(!placing&&!sim.expanding)document.body.style.cursor='pointer'}} onPointerOut={()=>{document.body.style.cursor='auto'}}><BuildingModel kind={b.kind} dustCovered={b.kind==='solar'&&dustCovered} operating={b.active&&(b.damage??0)<80&&(operations.powered[b.id]??1)>0&&!(b.kind==='solar'&&(dust||sim.resources.power<10))} damaged={(b.damage??0)>0}/>
  {(b.damage??0)>0&&<Html position={[0,3.5,0]} center><span className="facility-warning">{b.repairUntil?`⚒ REPAIR · SOL ${b.repairUntil}`:'⚠ FAULT'}</span></Html>}
  {b.kind==='habitat'&&sim.effects.some(e=>e.shelter&&e.untilSol>sim.sol)&&<mesh rotation={[-Math.PI/2,0,0]} position={[0,.15,0]}><ringGeometry args={[3.2,3.4,64]}/><meshBasicMaterial color="#73d5de"/></mesh>}
 {selected===b.id&&<><mesh rotation={[-Math.PI/2,0,0]} position={[0,.12,0]}><ringGeometry args={[catalog[b.kind].radius+.15,catalog[b.kind].radius+.23,64]}/><meshBasicMaterial color="#8de4de" side={THREE.DoubleSide}/></mesh><Html position={[0,4,0]} center><div className="world-label">{catalog[b.kind].name} <span>{(b.damage??0)>=80?'FAULT':b.active?'ONLINE':'OFFLINE'}</span></div></Html></>}{!b.active&&selected===b.id&&<Html position={[0,3,0]} center><span className={`offline ${!facilityUnlocked(sim,b.kind)?'facility-locked':''}`}>{facilityUnlocked(sim,b.kind)?'OFFLINE':`${catalog[b.kind].name} · LOCKED`}</span></Html>}</group>)}

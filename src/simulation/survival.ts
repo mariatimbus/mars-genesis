@@ -1,4 +1,5 @@
 import { commissioningComplete } from './commissioning';
+import { hasSystemLocks } from '../weather/incidents';
 import { modeledWeatherTemperature } from '../nasa/environment';
 import type { SurvivalState } from './types';
 import { calculateOperations } from './lifeSupport';
@@ -26,7 +27,7 @@ export function processQueue(s:SurvivalState):SurvivalState {
  return n;
 }
 export function nextSol(s:SurvivalState,{events=true}:{events?:boolean}={}):SurvivalState {
- if(s.pendingEvent||s.status!=='playing'||!commissioningComplete(s))return s;
+ if(s.pendingEvent||s.status!=='playing'||!commissioningComplete(s)||hasSystemLocks(s))return s;
  const ready=processQueue(s);
  const event=events?eventDue(ready):null;if(event)return beginEvent(ready,event);
  // Archived MEDA extrema drive a synthetic daily cycle; the cycle is not a measured time series.

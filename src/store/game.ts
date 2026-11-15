@@ -10,9 +10,15 @@ import { catalog, validPlacement, type Kind } from '../simulation/engine';
 import { createScenario, nextSol, canWork } from '../simulation/survival';
 import { applyDecision, optionBlocked, decisionOptions } from '../simulation/events';
 import type { Assignment, Difficulty, SurvivalState } from '../simulation/types';
+import { enterSurfaceSol,repairSurfaceIncident } from '../weather/incidentActions';
+import { advanceChallengeClock } from '../training/attempts';
+import type { SurfaceIncidentId } from '../weather/incidents';
+import { useSurfaceWeather } from '../weather/store';
+import { DEFAULT_SURFACE_SECONDS } from '../weather/timeOfDay';
 type Game = SurvivalState & {
  startFieldMission:()=>void; fieldRepair:(id:string)=>boolean; evaTick:(id:string,dt:number,safe:boolean,suited:boolean,oxygen:number,moving:boolean,sprint:boolean)=>void; fieldUse:(id:string,playerId:string)=>void; refillSuit:(amount:number)=>boolean; pressurize:()=>boolean;
  trainingAction:(id:TaskId,action:TaskAction)=>void; restartTraining:(id:TaskId)=>void;
+ challengeTick:(dt:number)=>void;enterSurfaceSol:(sol:number,replayScenario?:boolean)=>void;surfaceRepairAction:(id:SurfaceIncidentId,action:TaskAction)=>void;
  prologueSeen:boolean; completePrologue:()=>void; replayPrologue:()=>void;
  selected:string|null; placing:Kind|null; expanding:boolean; selectedPlot:string|null;
  startExpansion:()=>void; chooseExpansion:(id:string)=>void; confirmExpansion:()=>void;
@@ -31,6 +37,9 @@ export const useGame=create<Game>()(persist((set,get)=>({...createScenario(),pro
  fieldUse:(id,playerId)=>{const s=get(),b=s.buildings.find(b=>b.id===id);if(!b||!b.active||!facilityUnlocked(s,b.kind))return;const flag=`field-use-${id}-${s.sol}`;if(s.flags.includes(flag)){set({message:'Already collected this sol.'});return;}if(s.resources.power<3)return;let n=simulationSnapshot(s);n=structuredClone(n);n.resources.power-=3;n.stats.consumed.power+=3;n.flags.push(flag);if(b.kind==='greenhouse'){n.resources.food+=.35;n.stats.produced.food+=.35;}else if(b.kind==='medical'){n.astronauts=n.astronauts.map(c=>c.id===playerId?{...c,health:Math.min(100,c.health+10),fatigue:Math.max(0,c.fatigue-20)}:c);}else if(b.kind==='storage'){n.resources.materials+=6;n.stats.produced.materials+=6;}else if(b.kind==='research'){n.systems.research+=4;n.resources.materials+=2;n.stats.produced.materials+=2;}else if(b.kind==='water'){n.systems.waterKg=Math.min(150,n.systems.waterKg+1);}else if(b.kind==='oxygen'){n.resources.oxygen+=.2;n.stats.produced.oxygen+=.2;}else if(b.kind==='habitat'){n.astronauts=n.astronauts.map(c=>c.id===playerId?{...c,fatigue:Math.max(0,c.fatigue-15)}:c);}else{n.resources.power=Math.min(n.systems.batteryCapacityKwh,n.resources.power+4);n.stats.produced.power+=4;}n.message='Equipment cycle complete. Colony reserves updated.';set(n);},
  trainingAction:(id,action)=>set(s=>{const before=simulationSnapshot(s),after=applyTraining(before,id,action);return after===before?s:after}),
  restartTraining:id=>set(s=>restartTrainingTask(simulationSnapshot(s),id)),
+ challengeTick:dt=>set(s=>advanceChallengeClock(s,dt)),
+ enterSurfaceSol:(sol,replayScenario)=>set(s=>{const n=enterSurfaceSol(s,sol,replayScenario);return n===s?s:n}),
+ surfaceRepairAction:(id,action)=>set(s=>{const n=repairSurfaceIncident(s,id,action);return n===s?s:n}),
  completePrologue:()=>set({prologueSeen:true}),
  replayPrologue:()=>set({prologueSeen:false,placing:null,expanding:false,selectedPlot:null}),
  select:id=>set({selected:id,placing:null,expanding:false,selectedPlot:null}),
@@ -48,9 +57,9 @@ export const useGame=create<Game>()(persist((set,get)=>({...createScenario(),pro
  toggle:()=>set(s=>({buildings:s.buildings.map(b=>b.id===s.selected&&facilityUnlocked(s,b.kind)?{...b,active:!b.active}:b)})),
  assign:(id,assignment)=>set(s=>({astronauts:s.astronauts.map(c=>{if(c.id!==id||!c.alive||s.effects.some(e=>e.shelter&&e.untilSol>s.sol))return c;if(c.condition==='Incapacitated'&&assignment!=='rest')return c;const n={...c,assignment};return {...n,canWork:canWork(n)};}),message:'Crew assignment updated.'})),
  priority:p=>set(s=>({flags:[...s.flags.filter(f=>!f.startsWith('priority-')),`priority-${p}`],message:`Power allocation: habitat safety first, then ${p}.`})),
- reset:(seed,difficulty,scenario)=>set(s=>({...createScenario(seed??s.seed,difficulty??s.difficulty,scenario??s.scenario),prologueSeen:false,selected:null,placing:null,expanding:false,selectedPlot:null})),
+ reset:(seed,difficulty,scenario)=>{const s=get(),next=createScenario(seed??s.seed,difficulty??s.difficulty,scenario??s.scenario);useSurfaceWeather.setState({sol:1,seconds:DEFAULT_SURFACE_SECONDS,missionSol:1,missionSeed:next.seed,previewSol:null,blocked:false});set({...next,prologueSeen:false,selected:null,placing:null,expanding:false,selectedPlot:null})},
  dismissNotification:()=>set({notifications:[]})
-}),{name:'mars-genesis-survival',version:7,migrate:(saved,version)=>{const s=saved as Partial<Game>;return {...migrateTraining((version<5?migrateStartup:((state:SurvivalState)=>state))({...s,message:englishText(s.message??'Welcome to Ares One.'),history:(s.history??[]).map(englishText),notifications:(s.notifications??[]).map(englishText),expandedPlots:(s.expandedPlots??[]).filter(id=>EXPANSION_PLOTS.some(p=>p.id===id))} as Game)),prologueSeen:version<4?false:(s.prologueSeen??false)} as Game},partialize:state=>({...simulationSnapshot(state),prologueSeen:state.prologueSeen})}));
+}),{name:'mars-genesis-survival',version:9,migrate:(saved,version)=>{const s=saved as Partial<Game>;return {...migrateTraining((version<5?migrateStartup:((state:SurvivalState)=>state))({...s,message:englishText(s.message??'Welcome to Ares One.'),history:(s.history??[]).map(englishText),notifications:(s.notifications??[]).map(englishText),expandedPlots:(s.expandedPlots??[]).filter(id=>EXPANSION_PLOTS.some(p=>p.id===id))} as Game)),prologueSeen:version<4?false:(s.prologueSeen??false)} as Game},partialize:state=>({...simulationSnapshot(state),prologueSeen:state.prologueSeen})}));
 export function simulationSnapshot(state:Game):SurvivalState {
  const {selected,placing,expanding,selectedPlot,prologueSeen,...rest}=state;
  return Object.fromEntries(Object.entries(rest).filter(([,v])=>typeof v!=='function')) as unknown as SurvivalState;

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Slider } from '../Slider';
-import { irrigationBands } from '../engine';
+import { irrigationBands,lightRecipeValid } from '../engine';
 import { Plant, plantInfo, type PlantHealth } from '../art';
 import type { StageProps } from './common';
 import { Btn, Meter, Play } from './common';
 
 export function LightsStage({ t, send }: StageProps) {
-  const [red, blue, green] = t.values, total = red + blue + green, over = total > 130;
+  const [red, blue, green] = t.values, total = red + blue + green, budget=t.hard?115:130, over = total > budget;
   const growth = Math.min(1, red / 50) * Math.min(1, blue / 30), mix = `rgb(${Math.round(red * 2.55)},${Math.round(green * 2.55)},${Math.round(blue * 2.55)})`;
   const health: PlantHealth = growth >= 1 ? 'good' : 'dark';
   const X = (nm: number) => 40 + (nm - 400) / 300 * 520;
@@ -21,7 +21,7 @@ export function LightsStage({ t, send }: StageProps) {
       <path d="M100 42 L500 42 L570 200 L30 200 Z" fill="url(#cone)" />
       <rect x="40" y="196" width="520" height="24" rx="4" fill="#4a3426" />
       {[0, 1, 2, 3, 4].map(i => <Plant key={i} kind={0} x={110 + i * 95} y={200} scale={.6 + growth * .7} health={health} />)}
-      <text x="300" y="224" textAnchor="middle" className={growth >= 1 ? 'ok-label' : 'svg-label'}>{growth >= 1 ? 'LEAVES ARE GROWING WELL' : red < 50 ? 'PLANTS NEED MORE RED LIGHT' : 'PLANTS NEED MORE BLUE LIGHT'}</text>
+      <text x="300" y="224" textAnchor="middle" className={lightRecipeValid(t.values,t.hard) ? 'ok-label' : 'svg-label'}>{t.hard?(lightRecipeValid(t.values,true)?'REPAIR RECIPE IN BAND':'REPAIR RECIPE OUT OF BAND'):growth >= 1 ? 'LEAVES ARE GROWING WELL' : red < 50 ? 'PLANTS NEED MORE RED LIGHT' : 'PLANTS NEED MORE BLUE LIGHT'}</text>
     </svg>
     <svg viewBox="0 0 600 160" className="stage-svg spectrum" aria-label="Light the leaves absorb">
       <defs><linearGradient id="rainbow" x1="0" x2="1"><stop offset="0" stopColor="#7a3aff" /><stop offset=".2" stopColor="#3a6bff" /><stop offset=".45" stopColor="#3aff7a" /><stop offset=".6" stopColor="#f2e23a" /><stop offset=".8" stopColor="#ff8a3a" /><stop offset="1" stopColor="#ff3a3a" /></linearGradient></defs>
@@ -33,8 +33,8 @@ export function LightsStage({ t, send }: StageProps) {
       <text x="300" y="44" textAnchor="middle" className="chart-note">Leaves reflect most green light. That is why they look green!</text>
     </svg>
 </>} controls={<>
-    {['Red light', 'Blue light', 'Green inspection light'].map((label, i) => <Slider key={label} label={label} value={t.values[i]} onChange={value => send('light', i, value)} />)}
-    <Meter label="⚡ Lighting budget used" value={total} max={130} unit={` / 130`} color={over ? '#e2573b' : '#5fe08a'} />
+    {t.hard&&<p className="hard-stage-rules">Repair targets: red 58–68 · blue 36–46 · green 8–18 · total ≤115. Test only when all four conditions are met.</p>}{['Red light', 'Blue light', 'Green inspection light'].map((label, i) => <Slider key={label} label={label} value={t.values[i]} onChange={value => send('light', i, value)} />)}
+    <Meter label="⚡ Lighting budget used" value={total} max={budget} unit={` / ${budget}`} color={over ? '#e2573b' : '#5fe08a'} />
     <div className="stage-buttons"><Btn primary onClick={() => send('test')}>🌱 Test the light recipe</Btn></div>
   </>} />;
 }

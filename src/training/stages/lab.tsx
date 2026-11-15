@@ -136,6 +136,7 @@ export function RockStage({ t, send }: StageProps) {
 const sensors = [['🌡️', 'Thermometer', 'Temperature'], ['⏲️', 'Barometer', 'Pressure'], ['🌬️', 'Wind vane', 'Wind'], ['🔆', 'Optical sensor', 'Light / dust']];
 
 export function WeatherStage({ t, send }: StageProps) {
+  const calibration=t.hard&&t.phase===1,displaySensors=calibration?[['❄️','Cooling reference','Temperature'],['⏲️','Pressure reference','Pressure'],['🌬️','Spinning vane check','Wind'],['🔆','Reference lamp','Light / dust']]:sensors;
   const [selected, setSelected] = useState(-1), m = t.marks;
   return <Play vis={<>
     <svg viewBox="0 0 220 380" className="stage-svg mast-svg" aria-label="Weather mast">
@@ -145,16 +146,16 @@ export function WeatherStage({ t, send }: StageProps) {
         {[0, 1, 2, 3].map(i => { const y = 60 + i * 72, mounted = m.includes(i); return <g key={i}>
           <path d={`M116 ${y} H170`} stroke="#a8b2c4" strokeWidth="5" />
           <circle cx="180" cy={y} r="22" fill={mounted ? '#163a2b' : '#0d1828'} stroke={mounted ? '#3cc27a' : '#56647e'} strokeWidth="3" strokeDasharray={mounted ? '' : '5 4'} />
-          <text x="180" y={y + 8} textAnchor="middle" fontSize="22">{mounted ? sensors[i][0] : ''}</text>
-          <text x="96" y={y + 4} textAnchor="end" className="svg-label">{sensors[i][2].toUpperCase()}</text>
+          <text x="180" y={y + 8} textAnchor="middle" fontSize="22">{mounted ? displaySensors[i][0] : ''}</text>
+          <text x="96" y={y + 4} textAnchor="end" className="svg-label">{displaySensors[i][2].toUpperCase()}</text>
         </g>; })}
       </svg>
 </>} controls={<>
       <div className="weather-side">
         <strong className="side-title">1 · CHOOSE A SENSOR</strong>
-        <div className="sensor-cards">{sensors.map(([icon, name], i) => <button type="button" key={name} disabled={m.includes(i)} aria-pressed={selected === i} className={selected === i ? 'selected' : ''} onClick={() => setSelected(i)}><span>{icon}</span>{m.includes(i) ? '✓ ' : ''}{name}</button>)}</div>
+        {t.hard&&<p className="hard-stage-rules">{calibration?'Round 2/2: match the independent calibration checks.':'Round 1/2: connect all four sensors, then verify four calibration checks.'} A wrong connection trips the bus.</p>}<div className="sensor-cards">{displaySensors.map(([icon, name], i) => <button type="button" key={name} disabled={m.includes(i)} aria-pressed={selected === i} className={selected === i ? 'selected' : ''} onClick={() => setSelected(i)}><span>{icon}</span>{m.includes(i) ? '✓ ' : ''}{name}</button>)}</div>
         <strong className="side-title">2 · CHOOSE ITS SOCKET</strong>
-        <div className="sensor-cards sockets">{sensors.map(([, , quantity], i) => <button type="button" key={quantity} disabled={selected < 0 || m.includes(i)} onClick={() => { send('match', selected, i); setSelected(-1); }}>⭘ {quantity} socket</button>)}</div>
+        <div className="sensor-cards sockets">{displaySensors.map(([, , quantity], i) => <button type="button" key={quantity} disabled={selected < 0 || m.includes(i)} onClick={() => { send('match', selected, i); setSelected(-1); }}>⭘ {quantity} socket</button>)}</div>
       </div>
   </>} />;
 }

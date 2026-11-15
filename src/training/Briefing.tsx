@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import { RoomScene } from './art';
 import { briefings } from './briefings';
 import { references, roomNames, type TrainingTask } from './catalog';
+import { AttemptRules } from './AttemptPanel';
 
 /** Mission briefing shown before a challenge starts: WHY on Mars → HOW it works → RULES → WHAT you learn. */
 export function Briefing({ task, number, disabled, onStart }: { task: TrainingTask; number: number; disabled: boolean; onStart: () => void }) {
@@ -32,7 +33,7 @@ export function Briefing({ task, number, disabled, onStart }: { task: TrainingTa
       <h4><span>💡</span>What you will learn</h4>
       <p>{b.learn}</p>
     </section>
-    <footer className="briefing-start">
+    <AttemptRules id={task.id}/><footer className="briefing-start">
       <button type="button" disabled={disabled} onClick={onStart}>I understand, start the mission <ChevronRight size={18} /></button>
       <small>Training mode · colony time and supplies stay paused · progress is saved</small>
     </footer>
