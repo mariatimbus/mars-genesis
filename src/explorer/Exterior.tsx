@@ -33,8 +33,8 @@ function Sign({text,position,width=2.6,rotation=0,postHeight=0}:{text:string;pos
  const texture=useMemo(()=>{
   const c=document.createElement('canvas');c.width=1024;c.height=256;const ctx=c.getContext('2d')!;
   ctx.fillStyle=C.screen;ctx.fillRect(0,0,1024,256);ctx.fillStyle=C.yellow;ctx.fillRect(0,0,16,256);
-  ctx.font='500 54px monospace';ctx.fillStyle=C.green;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,520,120,960);
-  ctx.fillStyle=C.blue;ctx.font='23px monospace';ctx.fillText('ARES ONE / SURFACE OPERATIONS',520,214,930);
+  ctx.font='500 54px Inter,Segoe UI,sans-serif';ctx.fillStyle=C.green;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,520,120,960);
+  ctx.fillStyle=C.blue;ctx.font='23px Inter,Segoe UI,sans-serif';ctx.fillText('ARES ONE / SURFACE OPERATIONS',520,214,930);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
  },[text]);
  useEffect(()=>()=>texture.dispose(),[texture]);

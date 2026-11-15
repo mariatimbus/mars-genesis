@@ -26,17 +26,17 @@ export function CRTMonitor({title,status='STANDBY',lines=[],schematic=false,widt
  const signature=lines.join('|');
  useEffect(()=>{
   const c=texture.image as HTMLCanvasElement,ctx=c.getContext('2d')!;ctx.setTransform(512/768,0,0,320/512,0,0);ctx.fillStyle=C.screen;ctx.fillRect(0,0,768,512);
-  ctx.textBaseline='top';ctx.font='bold 25px monospace';ctx.fillStyle=C.green;ctx.fillText(title.toUpperCase().slice(0,35),28,24);
-  ctx.font='19px monospace';ctx.fillStyle=status==='ONLINE'?C.green:C.yellow;ctx.fillText(`STATUS / ${status}`,28,61);ctx.strokeStyle='#42654a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(28,90);ctx.lineTo(740,90);ctx.stroke();
+  ctx.textBaseline='top';ctx.font='bold 25px Inter,Segoe UI,sans-serif';ctx.fillStyle=C.green;ctx.fillText(title.toUpperCase().slice(0,35),28,24);
+  ctx.font='19px Inter,Segoe UI,sans-serif';ctx.fillStyle=status==='ONLINE'?C.green:C.yellow;ctx.fillText(`STATUS / ${status}`,28,61);ctx.strokeStyle='#42654a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(28,90);ctx.lineTo(740,90);ctx.stroke();
   if(schematic){
-   ctx.strokeStyle=C.blue;ctx.lineWidth=2;for(let i=0;i<4;i++){const x=42+i*172;ctx.strokeRect(x,145,134,160);ctx.strokeRect(x+10,156,114,30);ctx.beginPath();ctx.moveTo(x+64,117);ctx.lineTo(x+64,145);ctx.moveTo(x+64,305);ctx.lineTo(x+64,340);ctx.stroke();ctx.fillStyle=C.green;ctx.font='15px monospace';ctx.fillText(['POWER','LIFE SUPPORT','THERMAL','RECYCLING'][i],x+10,210);ctx.strokeStyle=C.green;ctx.beginPath();ctx.arc(x+65,266,19,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=C.blue}
+   ctx.strokeStyle=C.blue;ctx.lineWidth=2;for(let i=0;i<4;i++){const x=42+i*172;ctx.strokeRect(x,145,134,160);ctx.strokeRect(x+10,156,114,30);ctx.beginPath();ctx.moveTo(x+64,117);ctx.lineTo(x+64,145);ctx.moveTo(x+64,305);ctx.lineTo(x+64,340);ctx.stroke();ctx.fillStyle=C.green;ctx.font='15px Inter,Segoe UI,sans-serif';ctx.fillText(['POWER','LIFE SUPPORT','THERMAL','RECYCLING'][i],x+10,210);ctx.strokeStyle=C.green;ctx.beginPath();ctx.arc(x+65,266,19,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=C.blue}
    ctx.strokeStyle=C.blue;ctx.beginPath();ctx.moveTo(20,117);ctx.lineTo(738,117);ctx.moveTo(20,340);ctx.lineTo(738,340);ctx.stroke();
-   ctx.font='18px monospace';ctx.fillStyle=C.green;lines.slice(0,3).forEach((line,i)=>ctx.fillText(line.slice(0,58),28,375+i*27));
+   ctx.font='18px Inter,Segoe UI,sans-serif';ctx.fillStyle=C.green;lines.slice(0,3).forEach((line,i)=>ctx.fillText(line.slice(0,58),28,375+i*27));
   }else{
-   ctx.font='22px monospace';lines.slice(0,8).forEach((line,i)=>{ctx.fillStyle=i%3===0?C.green:'#78a985';ctx.fillText(line.slice(0,53),28,113+i*36)});
+   ctx.font='22px Inter,Segoe UI,sans-serif';lines.slice(0,8).forEach((line,i)=>{ctx.fillStyle=i%3===0?C.green:'#78a985';ctx.fillText(line.slice(0,53),28,113+i*36)});
    for(let i=0;i<9;i++){ctx.fillStyle=i<6?C.green:'#244329';ctx.fillRect(30+i*75,422,59,10)}
   }
-  ctx.font='15px monospace';ctx.fillStyle=C.blue;ctx.fillText('ARES SYSTEMS  /  GENESIS-OS 01',28,476);ctx.fillStyle=C.green;ctx.fillText('[E] ACCESS',605,476);
+  ctx.font='15px Inter,Segoe UI,sans-serif';ctx.fillStyle=C.blue;ctx.fillText('ARES SYSTEMS  /  GENESIS-OS 01',28,476);ctx.fillStyle=C.green;ctx.fillText('[E] ACCESS',605,476);
   // Thin scanlines remain part of the display, never a blur over the game view.
   ctx.fillStyle='#00000024';for(let y=0;y<512;y+=4)ctx.fillRect(0,y,768,1);texture.needsUpdate=true;
  },[texture,title,status,signature,schematic]);

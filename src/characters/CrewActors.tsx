@@ -15,7 +15,7 @@ function CrewActor({crew,agent,index}:{crew:CrewMember;agent:CrewAgent;index:num
  const root=useRef<THREE.Group>(null),pose=useRef<THREE.Group>(null),label=useRef<THREE.Sprite>(null),motion=useRef<AstronautMotion>({speed:0,sleeping:false}),yaw=useRef(agent.heading);
  const presence=useCrewLife(s=>s.members[crew.id]);
  const text=`${crew.name.split(' ')[0]} · ${presence?activityLabel(presence):crew.role}`;
- const texture=useMemo(()=>{const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=128;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#080d17e8';ctx.fillRect(0,0,1024,128);ctx.strokeStyle=presence?.activity==='sleeping'?'#8c9bd0':'#98b99c';ctx.lineWidth=4;ctx.strokeRect(4,4,1016,120);ctx.font='26px Menlo,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#c5e2bc';ctx.fillText(text,512,64,985);const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t},[text,presence?.activity]);
+ const texture=useMemo(()=>{const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=128;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#080d17e8';ctx.fillRect(0,0,1024,128);ctx.strokeStyle=presence?.activity==='sleeping'?'#8c9bd0':'#98b99c';ctx.lineWidth=4;ctx.strokeRect(4,4,1016,120);ctx.font='26px Inter,Segoe UI,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#c5e2bc';ctx.fillText(text,512,64,985);const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t},[text,presence?.activity]);
  useEffect(()=>()=>texture.dispose(),[texture]);
  useFrame((_,dt)=>{
   if(!root.current||!pose.current)return;

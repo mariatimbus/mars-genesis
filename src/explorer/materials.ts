@@ -15,7 +15,7 @@ export function panelTexture(floor:boolean){
   ctx.fillStyle='#51566c';ctx.fillRect(28,30,456,266);ctx.fillStyle='#656a80';ctx.fillRect(35,37,442,250);
   ctx.strokeStyle='#8e94a9';ctx.strokeRect(36,38,440,248);ctx.fillStyle=C.burgundy;ctx.fillRect(22,310,468,19);ctx.fillRect(22,340,468,6);
   ctx.fillStyle='#272b3e';ctx.fillRect(30,380,166,86);ctx.fillStyle='#8a8fa4';for(let y=388;y<460;y+=10)ctx.fillRect(39,y,148,3);
-  ctx.fillStyle='#1d2637';ctx.fillRect(290,385,176,44);ctx.font='15px monospace';ctx.fillStyle='#c3c7ba';ctx.fillText('ARES // S-04',302,412);
+  ctx.fillStyle='#1d2637';ctx.fillRect(290,385,176,44);ctx.font='15px Inter,Segoe UI,sans-serif';ctx.fillStyle='#c3c7ba';ctx.fillText('ARES // S-04',302,412);
   ctx.fillStyle=C.yellow;ctx.fillRect(416,446,50,5);ctx.fillStyle=C.blue;ctx.fillRect(402,446,8,5);
  }
  for(const x of [23,489])for(const y of [23,489]){ctx.fillStyle='#171d2c';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#959aaf';ctx.beginPath();ctx.moveTo(x-2,y);ctx.lineTo(x+2,y);ctx.stroke()}

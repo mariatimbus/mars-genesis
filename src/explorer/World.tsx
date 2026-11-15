@@ -29,7 +29,7 @@ export function Solid({p,size,color='#d8d5c7',texture,children}:{p:Point;size:Po
  return <RigidBody type="fixed" colliders={false} position={p}><CuboidCollider args={[size[0]/2,size[1]/2,size[2]/2]}/><mesh castShadow receiveShadow><boxGeometry args={size}/><meshStandardMaterial color={color} map={texture} roughness={.78} metalness={.25}/></mesh>{children}</RigidBody>
 }
 function Label({text,p,width=2,color='#b8e5dd',rotation=[0,0,0]}:{text:string;p:Point;width?:number;color?:string;rotation?:Point}){
- const texture=useMemo(()=>{const c=document.createElement('canvas');c.width=1024;c.height=192;const ctx=c.getContext('2d')!;ctx.fillStyle='#080d17';ctx.fillRect(0,0,1024,192);ctx.strokeStyle=color;ctx.lineWidth=5;ctx.strokeRect(8,8,1008,176);ctx.fillStyle=color;ctx.font='500 50px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,96,960);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t},[text,color]);
+ const texture=useMemo(()=>{const c=document.createElement('canvas');c.width=1024;c.height=192;const ctx=c.getContext('2d')!;ctx.fillStyle='#080d17';ctx.fillRect(0,0,1024,192);ctx.strokeStyle=color;ctx.lineWidth=5;ctx.strokeRect(8,8,1008,176);ctx.fillStyle=color;ctx.font='500 50px Inter,Segoe UI,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,96,960);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t},[text,color]);
  useEffect(()=>()=>texture.dispose(),[texture]);return <mesh position={p} rotation={rotation}><planeGeometry args={[width,width*192/1024]}/><meshBasicMaterial map={texture} side={THREE.DoubleSide}/></mesh>
 }
 function Target({data,children}:{data:Interaction;children:ReactNode}){
