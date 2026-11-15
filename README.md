@@ -1,5 +1,6 @@
 # MARS: Genesis
 
+Demo : https://mars-genesis.vercel.app
 Browser-based Mars colony survival trainer built with Vite, React, TypeScript, Three.js, React Three Fiber, Drei, Zustand and Tailwind CSS.
 
 ## Run and verify
