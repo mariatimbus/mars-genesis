@@ -9,7 +9,7 @@ import { incidentBriefing } from './briefingScript';
 import './incidentBriefing.css';
 
 /** Illustrated comms portrait: no extra WebGL context while the base is rendering. */
-function CommsAstronaut({name}:{name:string}){
+export function CommsAstronaut({name}:{name:string}){
  return <svg className="comms-astronaut" viewBox="0 0 220 260" role="img" aria-label={`${name}, astronaut responsible for this repair`}>
  <defs><linearGradient id="comms-suit" x2="1" y2="1"><stop stopColor="#f5efe3"/><stop offset=".55" stopColor="#a9b4bd"/><stop offset="1" stopColor="#506376"/></linearGradient><linearGradient id="comms-visor" x2=".6" y2="1"><stop stopColor="#152839"/><stop offset=".55" stopColor="#765e38"/><stop offset="1" stopColor="#192b35"/></linearGradient></defs>
  <path fill="#364651" stroke="#728592" strokeWidth="3" d="M52 147v-40h116v45l24 52H29z"/>
