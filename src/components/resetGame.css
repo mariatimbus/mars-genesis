@@ -1,0 +1,22 @@
+.reset-game-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:inherit;cursor:pointer;color:#ffc9b8;background:#3a1f28;border:1px solid #c26a5a;border-radius:6px;padding:8px 14px;min-height:38px}
+.reset-game-button:hover{background:#4e2632;border-color:#ff8a6a}
+.reset-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:#040813cc;backdrop-filter:blur(3px);font-family:Inter,'Segoe UI',sans-serif;animation:reset-fade .2s ease-out}
+.reset-dialog{width:min(480px,100%);padding:26px 26px 22px;border-radius:18px;background:linear-gradient(160deg,#2b1c26,#141c2e);border:2px solid #ff8a6a;box-shadow:0 20px 60px #000a,0 0 40px #ff5a4a33;color:#f3e4dc;text-align:center;animation:reset-pop .35s cubic-bezier(.2,1.5,.4,1)}
+.reset-icon{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ff8a6a22;color:#ff8a6a;animation:reset-wobble 1.2s ease-in-out infinite}
+.reset-dialog h2{margin:0 0 8px;font-size:22px;color:#fff}
+.reset-dialog p{margin:0 0 12px;font-size:14px;line-height:1.6}
+.reset-dialog b{color:#ffb39e}
+.reset-dialog ul{list-style:none;margin:0 0 18px;padding:12px 14px;border-radius:12px;background:#0c1220aa;display:grid;gap:8px;text-align:left;font-size:13px}
+.reset-actions{display:flex;gap:10px;flex-wrap:wrap}
+.reset-actions button{flex:1 1 180px;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:10px 14px;border-radius:10px;font:600 14px Inter,'Segoe UI',sans-serif;cursor:pointer}
+.reset-cancel{background:linear-gradient(180deg,#3a845b,#22503a);border:2px solid #7fdc9a;color:#fff}
+.reset-confirm{background:#3a1f28;border:2px solid #c26a5a;color:#ffc9b8}
+.reset-confirm:hover{background:#5a2430;border-color:#ff8a6a;color:#fff}
+.reset-actions button:focus-visible,.reset-game-button:focus-visible{outline:3px solid #f2d33c;outline-offset:3px}
+@keyframes reset-fade{from{opacity:0}}
+@keyframes reset-pop{from{opacity:0;transform:scale(.85)}}
+@keyframes reset-wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+
+.training-header .training-reset-game{min-height:38px;padding:6px 12px;font-size:12px}
+.location .location-reset{margin-top:8px}
+.pause-options .pause-reset{width:100%}

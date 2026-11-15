@@ -5,7 +5,7 @@ import { references, roomNames, type TrainingTask } from './catalog';
 import { AttemptRules } from './AttemptPanel';
 
 /** Mission briefing shown before a challenge starts: WHY on Mars → HOW it works → RULES → WHAT you learn. */
-export function Briefing({ task, number, disabled, onStart }: { task: TrainingTask; number: number; disabled: boolean; onStart: () => void }) {
+export function Briefing({ task, number, disabled, onStart, startLabel = 'I understand, start the mission' }: { task: TrainingTask; number: number; disabled: boolean; onStart: () => void; startLabel?: string }) {
   const b = briefings[task.id];
   return <article className="briefing">
     <header className="briefing-hero">
@@ -34,7 +34,7 @@ export function Briefing({ task, number, disabled, onStart }: { task: TrainingTa
       <p>{b.learn}</p>
     </section>
     <AttemptRules id={task.id}/><footer className="briefing-start">
-      <button type="button" disabled={disabled} onClick={onStart}>I understand, start the mission <ChevronRight size={18} /></button>
+      <button type="button" disabled={disabled} onClick={onStart}>{startLabel} <ChevronRight size={18} /></button>
       <small>Training mode · colony time and supplies stay paused · progress is saved</small>
     </footer>
   </article>;

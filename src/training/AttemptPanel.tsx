@@ -2,7 +2,8 @@ import { Clock,LockKeyhole } from 'lucide-react';
 import { useGame } from '../store/game';
 import { taskById,type TaskId } from './catalog';
 import { useTrainingUI } from './ui';
-import { CHALLENGE_RULES,attemptFor,retryRemaining,deadlineFor,cooldownLabel,failedLessonRoots,type AttemptMode } from './attempts';
+import { CHALLENGE_RULES,RETRY_ACTIVE_SECONDS,attemptFor,retryRemaining,deadlineFor,cooldownLabel,failedLessonRoots,type AttemptMode } from './attempts';
+import { FailHero } from './Celebrate';
 import { taskDependsOn,blockingSurfaceIncidents } from '../weather/incidents';
 import { initialTask,type TaskState } from './engine';
 import { failureReview } from './failureReview';
@@ -20,14 +21,31 @@ export function AttemptStatus({id,mode='lesson'}:{id:TaskId;mode?:AttemptMode}){
  const left=Math.max(0,limit-run.elapsed);
  return <div className={`attempt-deadline ${left<15?'is-urgent':''}`} role="timer" aria-label="Attempt time remaining"><Clock size={16}/><strong>{Math.ceil(left)} s</strong><span>ACTIVE PLAY REMAINING · resets do not refill this timer</span></div>;
 }
-export function AttemptFailure({id,mode='lesson',onRetry}:{id:TaskId;mode?:AttemptMode;onRetry:()=>void}){
+export function AttemptFailure({id,mode='lesson',onRetry,onReview}:{id:TaskId;mode?:AttemptMode;onRetry:()=>void;onReview?:()=>void}){
  const s=useGame(),run=attemptFor(s,id,mode),left=retryRemaining(s,id,mode);
  const upstream=mode==='lesson'?(failedLessonRoots(s).find(root=>root!==id&&taskDependsOn(id,root))??blockingSurfaceIncidents(s,id)[0]?.task):undefined;
  if(run?.status!=='failed')return null;
  const progress=s.commissioning.training;
  const board=(mode==='repair'?progress.incidents?.repairs[id]:progress.tasks[id])??initialTask(id,mode==='repair');
  const review=failureReview(id,board,mode,run);
- return <section className="attempt-failed" role="status"><LockKeyhole size={30}/><h3>Attempt failed — system isolated</h3><p className="attempt-consequence"><strong>Consequence:</strong> {run.reason||CHALLENGE_RULES[id]?.consequence}</p><div className="failure-review"><h4>Why this attempt failed</h4><p>{review.explanation}</p><h4>Rules before retry</h4><ol>{review.steps.map(step=><li key={step}>{step}</li>)}</ol></div><strong>{left>0?`${cooldownLabel(left)} game hours until retry`:upstream?'Inspection complete — upstream repair required':'Inspection complete — retry available'}</strong><p>{left>0?`About ${Math.ceil(left)} seconds of active play remain. Stay here or explore; the wait does not use colony reserves.`:'Start a new attempt and complete this step to restore its dependents.'}</p>{upstream&&<p>Also waiting for <b>{taskById(upstream).title}</b>. <button onClick={()=>useTrainingUI.getState().repair(upstream)}>Open upstream repair</button></p>}<button disabled={left>0||!!upstream||s.status!=='playing'||mode==='lesson'&&!!s.pendingEvent} onClick={onRetry}>Retry {taskById(id).title}</button><small>Earlier stars and discoveries are saved. Resetting, reloading or skipping days cannot clear the lock.</small></section>;
+ const ready=left<=0&&!upstream,waited=Math.max(0,Math.min(1,1-left/RETRY_ACTIVE_SECONDS));
+ return <section className="attempt-failed" role="status">
+  <FailHero title={`${taskById(id).title}: attempt failed`}/>
+  <div className="lesson-steps">
+   <article className="lesson-step"><h4><span>💥</span>What happened</h4><p>{run.reason||CHALLENGE_RULES[id]?.consequence}</p></article>
+   <article className="lesson-step"><h4><span>🔍</span>Why it failed</h4><p>{review.explanation}</p></article>
+   <article className="lesson-step"><h4><span>✅</span>Next time, do this</h4><ol>{review.steps.map(step=><li key={step}>{step}</li>)}</ol></article>
+  </div>
+  <div className="retry-panel">
+   <div className={`retry-ring ${ready?'ready':''}`} style={{'--p':`${waited*100}%`} as React.CSSProperties}><span>{ready?'🚀':'🔧'}</span></div>
+   <div className="retry-info"><strong>{left>0?`Engineers are checking the system · ${cooldownLabel(left)} game hours`:upstream?'Inspection complete: an earlier system must be repaired first':'Ready! You can try again now'}</strong><p>{left>0?`About ${Math.ceil(left)} seconds of play. Read the tips above, look at the mission page again, or explore the base meanwhile.`:'Use the tips above, then complete the step to bring the system back online.'}</p>{upstream&&<p>Also waiting for <b>{taskById(upstream).title}</b>. <button onClick={()=>useTrainingUI.getState().repair(upstream)}>Open upstream repair</button></p>}</div>
+   <div className="retry-actions">
+    {onReview&&<button type="button" onClick={onReview}>📖 See the mission page again</button>}
+    <button type="button" className="retry-go" disabled={!ready||s.status!=='playing'||mode==='lesson'&&!!s.pendingEvent} onClick={onRetry}>🔁 Try again</button>
+   </div>
+  </div>
+  <small>Your earlier stars and discoveries are saved. Reloading or skipping days does not clear the check.</small>
+ </section>;
 }
 export function GuidedMistakeReview({id,t}:{id:TaskId;t:TaskState}){
  if(CHALLENGE_RULES[id]||!t.lastMistake)return null;

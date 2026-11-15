@@ -28,6 +28,7 @@ import { commissioningComplete, facilityUnlocked, startupKind } from '../simulat
 import { decisionOptions, eventDefinition, optionBlocked } from '../simulation/events';
 import { sourceById } from '../nasa/sources';
 import { useTrainingUI } from '../training/ui';
+import { ResetGameButton } from '../components/ResetGameButton';
 import { StartupChallenge } from '../components/StartupChallenge';
 import { CrewPanel } from '../components/CrewPanel';
 import { OperationsPanel } from '../components/OperationsPanel';
@@ -99,6 +100,7 @@ function HUD({layout:l,onPreview}:{layout:ReturnType<typeof makeLayout>;onPrevie
   <div className="pause-shortcuts"><button className="fps-secondary" onClick={()=>e.open({type:'tablet'})}>Tablet</button><button className="fps-secondary" onClick={()=>useTrainingUI.getState().show()}>Mission challenges</button></div>
   <details className="pause-options"><summary>Time &amp; environment</summary><CrewTimeControls/><button className="fps-secondary" onClick={()=>onPreview('surface')}>Surface weather · 720 sols</button><button className="fps-secondary" onClick={()=>onPreview('interior')}>Inspect reactor room</button></details>
   <details className="pause-options"><summary>Base &amp; colony views</summary><button className="fps-secondary" onClick={()=>e.returnToBase(l)}>Return to habitat</button><button className="fps-secondary" onClick={()=>e.modeTo('overview')}>Colony view</button></details>
+  <details className="pause-options"><summary>Game</summary><ResetGameButton className="pause-reset"/></details>
   {!player.alive&&g.astronauts.filter(c=>c.alive).map(c=><button key={c.id} onClick={()=>{useExplorer.setState({playerId:c.id});e.modeTo('overview');e.modeTo('first-person')}}>Continue as {c.name}</button>)}
  </div></div>}
 
