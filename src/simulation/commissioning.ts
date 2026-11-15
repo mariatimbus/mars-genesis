@@ -22,6 +22,10 @@ export function migrateTraining(s:SurvivalState):SurvivalState {
  n.commissioning={...freshCommissioning(),...n.commissioning,legacyHabitat,completed:STARTUP_KINDS.filter(k=>n.commissioning?.completed.includes(k)),training:n.commissioning?.training??freshTraining()};
  // Older completed courses remain online; new mini-games are available as practice.
  n.commissioning.training.weatherUnlocked ||= commissioningComplete(n);
+ // The radiation-prediction lesson was replaced by Gravity & Exercise: keep the stars already earned.
+ const tr=n.commissioning.training as unknown as {records:Record<string,unknown>;tasks:Record<string,unknown>};
+ if(tr.records.dose&&!tr.records.gravity)tr.records.gravity=tr.records.dose;
+ delete tr.records.dose;delete tr.tasks.dose;
  return n;
 }
 // Legacy missions keep their running systems and progress. New missions always start offline.

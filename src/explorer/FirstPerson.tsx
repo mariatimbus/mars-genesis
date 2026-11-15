@@ -45,7 +45,7 @@ function EquipmentPanel({id}:{id:string}){
  const ready=facilityUnlocked(g,b.kind),r=calculateOperations(simulationSnapshot(g)).report;
  return <>{!ready?<StartupChallenge kind={startupKind(b.kind)}/>:<><span className="fps-eyebrow">IN-WORLD TERMINAL</span><h2>{catalog[b.kind].name}</h2><p className="terminal-state">{(b.damage??0)>0?`Fault · ${b.damage}% damage`:b.active?'Enabled':'Offline'}</p><p>{catalog[b.kind].description}</p><div className="terminal-readouts"><span>Battery<strong>{g.resources.power.toFixed(1)} kWh</strong></span><span>Water<strong>{g.systems.waterKg.toFixed(1)} kg</strong></span><span>Solar<strong>{r.generatedKwh.toFixed(1)} kWh/sol</strong></span></div>
  {(b.damage??0)>0?<button onClick={()=>e.open({type:'repair',id})}>Repair this equipment</button>:<><button onClick={()=>g.fieldUse(id,e.playerId)}>{b.kind==='storage'?'Collect supplies':b.kind==='habitat'?'Rest':b.kind==='medical'?'Treatment & rest':b.kind==='greenhouse'?'Collect food':b.kind==='research'?'Run experiment':'Run equipment cycle'} <small>3 kWh · once per sol</small></button><button className="fps-secondary" onClick={()=>{g.select(id);g.toggle()}}>{b.active?'Power down':'Power on'}</button></>}
- <button className="fps-secondary" onClick={()=>useTrainingUI.getState().show(startupKind(b.kind))}>Practice room challenges</button><p role="status" className="terminal-message">{g.message}</p></>}</>;
+ <button className="fps-secondary" onClick={()=>useTrainingUI.getState().show(startupKind(b.kind),true)}>Practice room challenges</button><p role="status" className="terminal-message">{g.message}</p></>}</>;
 }
 function CrewConversation({id}:{id:string}){
  const presence=useCrewLife(s=>s.members[id]);
