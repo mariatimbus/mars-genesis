@@ -3,7 +3,7 @@ import { createScenario } from '../simulation/survival';
 import { solveTraining } from '../training/testHelpers';
 import { applyTraining,restartTrainingTask } from '../training/engine';
 import { advanceChallengeClock,attemptFor } from '../training/attempts';
-import { roomSuspended,SURFACE_INCIDENTS } from './incidents';
+import { roomSuspended,SURFACE_INCIDENTS,incidentSeverity } from './incidents';
 import { enterSurfaceSol,repairSurfaceIncident } from './incidentActions';
 import { baseAlertState,roomMaintenance,alertPulse } from './alertState';
 
@@ -55,5 +55,13 @@ describe('base alert and map maintenance',()=>{
  it('uses a slow two-second light cycle and steady red when reduced motion is requested',()=>{
   expect(alertPulse(0)).toBe(.25);expect(alertPulse(1)).toBe(1);expect(alertPulse(2)).toBe(.25);
   for(const t of [0,.5,1,1.5,2])expect(alertPulse(t,true)).toBe(1);
+ });
+ it('starts fresh incidents as warning (orange) and turns critical (red) after the grace sols',()=>{
+  let s=enterSurfaceSol(solveTraining(createScenario()),284);
+  expect(baseAlertState(s).severity).toBe('warning');
+  expect(incidentSeverity(s,'ice-clouds')).toBe('warning');
+  s={...s,sol:286};
+  expect(baseAlertState(s).severity).toBe('critical');
+  expect(incidentSeverity(s,'ice-clouds')).toBe('critical');
  });
 });

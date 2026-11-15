@@ -1,4 +1,5 @@
 import type { SurvivalState } from '../simulation/types';
+import { taskById } from '../training/catalog';
 import { initialTask,reduceTask,type TaskAction } from '../training/engine';
 import { SURFACE_INCIDENTS,freshSurfaceIncidents,activeSurfaceIncidents,hasSurfaceIncidents,type SurfaceIncidentId } from './incidents';
 import { clampSol } from './calendar';
@@ -38,6 +39,14 @@ export function repairSurfaceIncident(s:SurvivalState,id:SurfaceIncidentId,actio
  const incidents={...p,active:p.active.filter(key=>!resolved.some(e=>e.id===key)),repairs:{...p.repairs,[incident.task]:next}};
  let n=withAttempt({...s,commissioning:{...s.commissioning,training:{...s.commissioning.training,incidents}}},incident.task,'repair',next.done?{...run,status:'succeeded'}:run);
  if(failed)return failAttempt(n,incident.task,'repair',run,undefined,{kind:'operation',action:{...action},note:next.mistakes>current.mistakes?next.note:undefined});
- if(resolved.length){n.message=hasSurfaceIncidents(n)?'Repair verified. Other maintenance locks remain.':'Repair verified. Dependent systems restored.';n.notifications=[...s.notifications,n.message];n.history=[...s.history,...resolved.map(e=>`Surface repair complete: ${e.title}.`)];}
+ if(resolved.length){
+  const taskTitle=taskById(incident.task).title;
+  const remaining=activeSurfaceIncidents(n).length;
+  n.message=resolved.length===1
+   ?(remaining?`Repair verified: ${resolved[0].title}. ${remaining} maintenance lock${remaining>1?'s':''} remain.`:`Repair verified: ${resolved[0].title}. Dependent systems restored.`)
+   :(remaining?`Repair verified: ${resolved.length} ${taskTitle} incidents resolved. ${remaining} maintenance lock${remaining>1?'s':''} remain.`:`Repair verified: ${resolved.length} ${taskTitle} incidents resolved. All dependent systems restored.`);
+  n.notifications=[...s.notifications,n.message];
+  n.history=[...s.history,...resolved.map(e=>`Surface repair complete: ${e.title}.`)];
+ }
  return n;
 }

@@ -18,11 +18,24 @@ export const SURFACE_INCIDENTS=[
 export type SurfaceIncidentId=typeof SURFACE_INCIDENTS[number]['id'];
 export interface SurfaceIncidentProgress {throughSol:number;triggered:SurfaceIncidentId[];active:SurfaceIncidentId[];repairs:Partial<Record<TaskId,TaskState>>}
 export const freshSurfaceIncidents=():SurfaceIncidentProgress=>({throughSol:1,triggered:[],active:[],repairs:{}});
-type State=Pick<SurvivalState,'commissioning'>;
+type State=Pick<SurvivalState,'commissioning'> & {sol?:number};
 export const surfaceIncident=(id:SurfaceIncidentId)=>SURFACE_INCIDENTS.find(e=>e.id===id)!;
 export const activeSurfaceIncidents=(s:State)=>(s.commissioning.training.incidents?.active??[]).map(surfaceIncident).filter(Boolean);
 export const hasSurfaceIncidents=(s:State)=>activeSurfaceIncidents(s).length>0;
 export const hasSystemLocks=(s:State)=>hasSurfaceIncidents(s)||failedLessonRoots(s).length>0;
+
+/** Newly triggered incidents start as a warning (orange) because systems degrade
+ * over surface sols, not instantly. After this grace window they become critical (red). */
+export const INCIDENT_WARNING_SOLS=2;
+export type IncidentSeverity='warning'|'critical';
+export function incidentSeverity(s:State,id:SurfaceIncidentId):IncidentSeverity {
+ const current=s.sol??1,event=surfaceIncident(id);
+ return current-event.sol<INCIDENT_WARNING_SOLS&&current<=event.endSol?'warning':'critical';
+}
+export function overallAlertSeverity(s:State):IncidentSeverity {
+ const active=s.commissioning.training.incidents?.active??[];
+ return active.some(id=>incidentSeverity(s,id)==='critical')?'critical':'warning';
+}
 export function taskDependsOn(id:TaskId,root:TaskId,seen=new Set<TaskId>()):boolean {
  if(id===root)return true;if(seen.has(id))return false;seen.add(id);
  const task=taskById(id),list=roomTasks(task.room),index=list.findIndex(t=>t.id===id);

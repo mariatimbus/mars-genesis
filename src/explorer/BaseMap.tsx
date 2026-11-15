@@ -19,8 +19,8 @@ export const ROOM_COLORS:Record<Kind,string>={habitat:'#bcc2dd',greenhouse:'#79b
 const codes:Record<Kind,string>={habitat:'HAB',greenhouse:'BIO',research:'LAB',oxygen:'O₂',solar:'PWR',water:'H₂O',medical:'MED',storage:'SUP'};
 export function BaseMap({layout:l}:{layout:Layout}){
  const crewPositions=useCrewLife(s=>s.members),crew=useGame(s=>s.astronauts),buildings=useGame(s=>s.buildings);
- const commissioning=useGame(s=>s.commissioning);
- const maintenance=useMemo(()=>new Map(l.rooms.map(r=>[r.id,roomMaintenance({commissioning},r.kind)])),[l,commissioning]);
+ const commissioning=useGame(s=>s.commissioning),sol=useGame(s=>s.sol);
+ const maintenance=useMemo(()=>new Map(l.rooms.map(r=>[r.id,roomMaintenance({commissioning,sol},r.kind)])),[l,commissioning,sol]);
  const blocked=l.rooms.filter(r=>maintenance.get(r.id)?.blocked);
  const {position,heading,mapExpanded,rovers,doors,playerId}=useExplorer(useShallow(s=>({position:s.position,heading:s.heading,mapExpanded:s.mapExpanded,rovers:s.rovers,doors:s.doors,playerId:s.playerId})));
  const plan=useMemo(()=>exteriorPlan(l,buildings),[l,buildings]),floor=useMemo(()=>tacticalFloor(l),[l]),fixtures=useMemo(()=>makeFixtures(l),[l]);

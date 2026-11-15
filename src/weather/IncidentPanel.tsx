@@ -7,7 +7,7 @@ import { TaskStage } from '../training/TaskStage';
 import { PlayExtra } from '../training/stages/common';
 import { briefings } from '../training/briefings';
 import { useTrainingUI } from '../training/ui';
-import { activeSurfaceIncidents,blockingSurfaceIncidents,type SurfaceIncidentId } from './incidents';
+import { activeSurfaceIncidents,blockingSurfaceIncidents,incidentSeverity,type SurfaceIncidentId } from './incidents';
 import { WEATHER_SOURCES } from './calendar';
 import './incidents.css';
 import { attemptFor,failedLessonRoots,retryRemaining } from '../training/attempts';
@@ -17,9 +17,12 @@ export function SurfaceIncidentNotice(){
  const g=useGame(),incidents=activeSurfaceIncidents(g);
  const failures=failedLessonRoots(g);if(!incidents.length&&!failures.length)return null;
  const roots=[...new Set(incidents.map(e=>e.task))];
- return <section className={`surface-incident-notice ${incidents.length?'is-base-alert':''}`} aria-label="System maintenance locks"><strong>{incidents.length?<Siren size={18}/>:<LockKeyhole size={14}/>} {incidents.length?'BASE ALERT · ':''}{roots.length+failures.length} MAINTENANCE LOCK{roots.length+failures.length>1?'S':''}</strong>{roots.map(task=>{
+ const severity=incidents.some(e=>incidentSeverity(g,e.id)==='critical')?'critical':'warning';
+ const title=severity==='warning'?'BASE WARNING · SYSTEMS AFFECTED':'BASE ALERT · SYSTEMS ISOLATED';
+ return <section className={`surface-incident-notice ${incidents.length?`is-base-alert is-${severity}`:''}`} aria-label="System maintenance locks"><strong>{incidents.length?<Siren size={18}/>:<LockKeyhole size={14}/>} {incidents.length?`${title} · `:''}{roots.length+failures.length} MAINTENANCE LOCK{roots.length+failures.length>1?'S':''}</strong>{roots.map(task=>{
   const event=incidents.find(e=>e.task===task)!,t=taskById(task);
-  return <div key={task}><span>{event.title}</span><small>{roomNames[t.room]} · {t.title}</small><button onClick={()=>useTrainingUI.getState().repair(task)}><Wrench size={13}/> Restore this step</button></div>;
+  const taskSeverity=incidentSeverity(g,event.id);
+  return <div key={task} className={`is-${taskSeverity}`}><span>{event.title}</span><small>{roomNames[t.room]} · {t.title} · {taskSeverity==='warning'?'warning — turns critical in 2 sols':'critical'}</small><button onClick={()=>useTrainingUI.getState().repair(task)}><Wrench size={13}/> Restore this step</button></div>;
  })}{failures.map(task=><div key={`failed-${task}`}><span className="failed-challenge-label">Attempt failed · {taskById(task).title}</span><small>{retryRemaining(g,task)>0?`${Math.ceil(retryRemaining(g,task))} active seconds until retry`:'Retry available · system still isolated'}</small><button onClick={()=>useTrainingUI.getState().repair(task)}>Open failed challenge</button></div>)}<p>Dependent steps are paused. Your stars and discoveries are saved.</p></section>;
 }
 export function IncidentLock({task}:{task:Parameters<typeof blockingSurfaceIncidents>[1]}){

@@ -75,6 +75,7 @@ describe('surface event maintenance and dependency locks',()=>{
   expect(activeSurfaceIncidents(s)).toHaveLength(4);
   s=repair(s,'regional-dust');expect(activeSurfaceIncidents(s).map(e=>e.id)).toEqual(['ice-clouds','dust-c-peak']);
   expect(taskAvailable(s,'dust')).toBe(true);expect(taskSuspended(s,'battery')).toBe(true);
+  expect(s.message).toContain('2 Clear the solar arrays incidents resolved');
   s=repair(s,'dust-c-peak');expect(facilityUnlocked(s,'solar')).toBe(true);expect(roomSuspended(s,'greenhouse')).toBe(true);
   s=repair(s,'ice-clouds');expect(activeSurfaceIncidents(s)).toHaveLength(0);
  });
