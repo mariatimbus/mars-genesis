@@ -314,13 +314,13 @@
 }
 
 /* compact one-screen briefing */
-.training-room.playing .briefing{flex:1;min-height:0;overflow:auto;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"hero hero" "why how" "stats rules" "learn rules" "start start";gap:10px;align-content:start;padding-right:4px}
+.training-room.playing .briefing{flex:1;min-height:0;overflow:auto;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"hero hero" "why how" "stats rules" "learn rules" "attempt attempt" "start start";gap:10px;align-content:start;padding-right:4px}
 .training-room.playing .briefing-hero{grid-area:hero;min-height:0}
 .training-room.playing .briefing-why{grid-area:why}.training-room.playing .briefing-how{grid-area:how}
 .training-room.playing .briefing-stats{grid-area:stats;grid-template-columns:repeat(3,1fr)}
 .training-room.playing .briefing-rules{grid-area:rules}.training-room.playing .briefing-learn{grid-area:learn}
 .training-room.playing .briefing-start{grid-area:start}
-.training-room.playing .room-scene{height:clamp(90px,17vh,150px)}
+.training-room.playing .room-scene{height:clamp(170px,24vh,230px)}
 .training-room.playing .briefing-title{padding:24px 18px 10px}
 .training-room.playing .briefing-title h3{font-size:22px}
 .training-room.playing .briefing section{padding:12px 16px}
@@ -340,7 +340,7 @@
 .play-controls .filter-card{padding:5px 8px}.play-controls .filter-card svg{width:80px}
 .play-controls .training-feedback{min-height:0;padding:9px 12px}
 @media(max-width:900px){
- .training-room.playing .briefing{grid-template-columns:1fr;grid-template-areas:"hero" "why" "stats" "how" "rules" "learn" "start"}
+ .training-room.playing .briefing{grid-template-columns:1fr;grid-template-areas:"hero" "why" "stats" "how" "rules" "learn" "attempt" "start"}
 }
 .zone-gauge:has(.zone-marker) .zone-head{margin-bottom:18px}
 .play-vis .kit-tool .tool-icon{width:clamp(64px,11vh,110px);height:clamp(64px,11vh,110px)}
@@ -428,4 +428,5 @@
 .card-lock span{font-size:44px;font-weight:700}
 .discovery-unlocked{flex-wrap:wrap}
 @media(max-width:700px){.challenge-row{grid-template-columns:34px minmax(0,1fr) auto}.challenge-room,.challenge-row button{display:none}}
-.training-room.playing .briefing-hero{min-height:clamp(90px,17vh,150px)}
+.training-room.playing .briefing-hero{min-height:clamp(170px,24vh,230px)}
+.training-room.playing .briefing>.attempt-rules{grid-area:attempt;margin:0;border-radius:12px}

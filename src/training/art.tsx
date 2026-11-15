@@ -75,19 +75,20 @@ export function Astronaut({ suit = '#e9edf3', visor = '#3a6fb5', badge, children
 
 /** Wide illustrated Mars scene for each room's mission briefing. */
 export function RoomScene({ room }: { room: TrainingRoom }) {
-  return <svg viewBox="0 0 800 240" className="room-scene" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  // The landscape continues 600 units past each side, so wide screens show the whole scene instead of a cropped strip.
+  return <svg viewBox="-600 0 2000 240" className="room-scene" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
       <linearGradient id="rs-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1b1730" /><stop offset=".55" stopColor="#6b3a3a" /><stop offset="1" stopColor="#d08a5a" /></linearGradient>
       <linearGradient id="rs-ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#b3603a" /><stop offset="1" stopColor="#6e3420" /></linearGradient>
       <radialGradient id="rs-sun"><stop offset="0" stopColor="#fff6d8" /><stop offset=".35" stopColor="#ffe9a8" stopOpacity=".8" /><stop offset="1" stopColor="#ffd27a" stopOpacity="0" /></radialGradient>
       <linearGradient id="rs-glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe8ff" stopOpacity=".55" /><stop offset="1" stopColor="#5fa8c8" stopOpacity=".25" /></linearGradient>
     </defs>
-    <rect width="800" height="240" fill="url(#rs-sky)" />
-    {Array.from({ length: 26 }, (_, i) => <circle key={i} cx={(i * 137) % 800} cy={(i * 53) % 90} r={i % 3 ? .8 : 1.4} fill="#fff" opacity=".6" />)}
+    <rect x="-600" width="2000" height="240" fill="url(#rs-sky)" />
+    {Array.from({ length: 64 }, (_, i) => <circle key={i} cx={-600 + (i * 137) % 2000} cy={(i * 53) % 90} r={i % 3 ? .8 : 1.4} fill="#fff" opacity=".6" />)}
     <circle cx="640" cy="58" r="46" fill="url(#rs-sun)" /><circle cx="640" cy="58" r="9" fill="#fff8e0" />
-    <path d="M0 150 L60 128 L130 140 L210 112 L300 136 L380 120 L470 140 L560 116 L650 134 L730 118 L800 132 V240 H0 Z" fill="#8a4a35" opacity=".8" />
-    <path d="M0 170 Q120 150 250 166 T520 160 T800 168 V240 H0 Z" fill="url(#rs-ground)" />
-    {[[90, 205, 16], [700, 212, 22], [520, 222, 10], [300, 226, 12]].map(([x, y, r]) => <ellipse key={x} cx={x} cy={y} rx={r} ry={r * .45} fill="#5a2a1a" />)}
+    <path d="M-600 140 L-520 118 L-430 134 L-340 110 L-250 130 L-160 116 L-70 138 L0 150 L60 128 L130 140 L210 112 L300 136 L380 120 L470 140 L560 116 L650 134 L730 118 L800 132 L880 114 L970 136 L1060 120 L1150 138 L1240 112 L1330 130 L1400 124 V240 H-600 Z" fill="#8a4a35" opacity=".8" />
+    <path d="M-600 168 Q-450 152 -300 164 T0 170 Q120 150 250 166 T520 160 T800 168 Q950 152 1100 166 T1400 162 V240 H-600 Z" fill="url(#rs-ground)" />
+    {[[-420, 214, 18], [-180, 206, 12], [90, 205, 16], [700, 212, 22], [520, 222, 10], [300, 226, 12], [980, 210, 18], [1240, 220, 14]].map(([x, y, r]) => <ellipse key={x} cx={x} cy={y} rx={r} ry={r * .45} fill="#5a2a1a" />)}
     {room === 'solar' && <g>{[0, 1, 2, 3].map(i => <g key={i} transform={`translate(${250 + i * 95} 150)`}><path d="M30 18 V44" stroke="#9aa6b8" strokeWidth="5" /><g transform="skewX(-18)"><rect x="0" y="-8" width="72" height="28" fill="#1f4fa8" stroke="#cfd8e6" strokeWidth="2.5" /><path d="M18 -8 v28 M36 -8 v28 M54 -8 v28 M0 6 h72" stroke="#7fb0ff" strokeWidth="1" /></g></g>)}<path d="M640 58 L330 150" stroke="#ffe9a8" strokeWidth="2" strokeDasharray="5 7" opacity=".7" /></g>}
     {room === 'water' && <g><path d="M300 175 V100 L330 70 L360 100 V175" fill="none" stroke="#c9d2de" strokeWidth="6" /><path d="M300 130 H360 M310 110 H350" stroke="#c9d2de" strokeWidth="4" /><rect x="324" y="100" width="12" height="110" fill="#8a96a8" /><ellipse cx="330" cy="224" rx="90" ry="12" fill="#7fd3ff" opacity=".85" /><path d="M260 222 q20 -6 40 0 M350 226 q20 -5 40 0" stroke="#e9f8ff" strokeWidth="2" fill="none" /><rect x="420" y="140" width="70" height="44" rx="10" fill="#d9dee6" stroke="#8d99ab" strokeWidth="3" /><path d="M360 160 H420" stroke="#8d99ab" strokeWidth="5" /><text x="455" y="168" textAnchor="middle" fontSize="20">💧</text></g>}
     {room === 'oxygen' && <g><path d="M250 190 Q250 110 340 110 Q430 110 430 190 Z" fill="#d9dee6" stroke="#8d99ab" strokeWidth="3" /><rect x="320" y="150" width="40" height="40" rx="6" fill="#6f7d92" /><g transform="translate(470 110)"><rect x="0" y="0" width="54" height="80" rx="24" fill="#4f8fd8" stroke="#cfe0f6" strokeWidth="3" /><text x="27" y="48" textAnchor="middle" fontSize="20" fill="#fff" fontWeight="700">O₂</text></g>{[[520, 92, 7], [540, 70, 5], [508, 60, 4], [560, 48, 6]].map(([x, y, r]) => <circle key={y} cx={x} cy={y} r={r} fill="none" stroke="#bfe8ff" strokeWidth="2" />)}</g>}
